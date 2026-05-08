@@ -19,19 +19,21 @@ position:fixed; inset:0;
 background:radial-gradient(ellipse at 50% 60%, #0d2010 0%, #040a04 100%);
 display:flex; flex-direction:column; align-items:center; justify-content:center;
 z-index:100;
+padding:1.2em 1em;
+overflow-y:auto;
 }
 #title-screen h1 {
-font-size:clamp(3rem,13vw,6.5rem); letter-spacing:.18em;
+font-size:clamp(2rem,9vw,6.5rem); letter-spacing:.18em;
 color:#e8c96a; text-shadow:0 0 80px rgba(232,201,106,.5), 0 2px 0 rgba(0,0,0,.8);
 font-weight:normal; margin-bottom:.1em;
 }
-.subtitle { color:#7aaa6a; font-size:clamp(.65rem,2.8vw,.9rem); letter-spacing:.4em; text-transform:uppercase; margin-bottom:2.8em; opacity:.75; }
-.ornament { width:110px; height:1px; background:linear-gradient(90deg,transparent,#e8c96a,transparent); margin:.9em auto; }
+.subtitle { color:#7aaa6a; font-size:clamp(.6rem,2.5vw,.9rem); letter-spacing:.35em; text-transform:uppercase; margin-bottom:1.5em; opacity:.75; }
+.ornament { width:110px; height:1px; background:linear-gradient(90deg,transparent,#e8c96a,transparent); margin:.6em auto; }
 #start-btn {
 background:transparent; border:1.5px solid rgba(232,201,106,.7); color:#e8c96a;
-padding:1em 2.8em; font-size:.95rem; letter-spacing:.35em; text-transform:uppercase;
+padding:.8em 2.4em; font-size:.9rem; letter-spacing:.3em; text-transform:uppercase;
 cursor:pointer; font-family:‘Georgia’,serif; border-radius:2px;
-transition: all .3s;
+transition: all .3s; margin-top:.6em;
 }
 #start-btn:active { background:rgba(232,201,106,.1); }
 
@@ -159,18 +161,27 @@ line-height:1.6;
 
 /* DIFICULTAD */
 .difficulty-row {
-display:flex; gap:14px; margin-bottom:1.6em;
+display:flex; gap:10px; margin-bottom:1em;
 flex-direction:column; align-items:center;
 }
 .diff-btn {
 background:transparent; border:1px solid rgba(232,201,106,.35); color:#cde8b0;
-padding:.7em 2em; font-size:.8rem; letter-spacing:.25em; text-transform:uppercase;
+padding:.55em 1.8em; font-size:.78rem; letter-spacing:.22em; text-transform:uppercase;
 cursor:pointer; font-family:‘Georgia’,serif; border-radius:2px;
-transition: all .3s; min-width:240px;
+transition: all .3s; min-width:220px;
 }
-.diff-btn .meta { display:block; font-size:.6rem; opacity:.7; letter-spacing:.15em; margin-top:.3em; color:#7aaa6a; }
+.diff-btn .meta { display:block; font-size:.58rem; opacity:.7; letter-spacing:.15em; margin-top:.25em; color:#7aaa6a; }
 .diff-btn.selected { border-color:#e8c96a; background:rgba(232,201,106,.1); color:#e8c96a; }
 .diff-btn:active { background:rgba(232,201,106,.15); }
+
+/* En pantalla horizontal compacta: distribuir difficulty en fila para ahorrar alto */
+@media (orientation: landscape) and (max-height: 500px) {
+.difficulty-row { flex-direction:row; gap:8px; }
+.diff-btn { min-width:140px; padding:.5em 1em; font-size:.72rem; }
+#title-screen h1 { font-size:clamp(1.6rem,6vh,3rem); margin-bottom:0; }
+.subtitle { margin-bottom:.6em; }
+.ornament { margin:.3em auto; }
+}
 
 /* PANTALLA FINAL */
 #end-screen {
@@ -325,7 +336,7 @@ text-align:center; margin-top:1em; font-style:italic;
 
 <!-- Tag de versión (esquina inferior izquierda) -->
 
-<div id="version-tag">v0.2.1</div>
+<div id="version-tag">v0.2.2</div>
 
 <!-- Pantalla final -->
 
@@ -2183,6 +2194,18 @@ window.addEventListener('resize',()=>{
 //  PANTALLA COMPLETA
 // ══════════════════════════════════════════════════════════════════
 const fullscreenBtn = document.getElementById('fullscreen-btn');
+
+// Detectar iOS (iPhone/iPad). El "iPad moderno" se reporta como Mac
+// pero tiene maxTouchPoints, por eso la condición compuesta.
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+if (isIOS) {
+  // Safari iOS no soporta la API real de fullscreen.
+  // Ocultar el botón y sugerir "Añadir a pantalla de inicio" para fullscreen real.
+  fullscreenBtn.style.display = 'none';
+}
+
 function isFullscreen() {
   return !!(document.fullscreenElement
         || document.webkitFullscreenElement
