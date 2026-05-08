@@ -1,1 +1,2156 @@
+<!DOCTYPE html>
 
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Pacha — Bosque Aymara</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:#060e06; overflow:hidden; font-family:'Georgia',serif; touch-action:none; }
+  canvas { display:block; width:100vw; height:100vh; }
+
+#title-screen {
+position:fixed; inset:0;
+background:radial-gradient(ellipse at 50% 60%, #0d2010 0%, #040a04 100%);
+display:flex; flex-direction:column; align-items:center; justify-content:center;
+z-index:100;
+}
+#title-screen h1 {
+font-size:clamp(3rem,13vw,6.5rem); letter-spacing:.18em;
+color:#e8c96a; text-shadow:0 0 80px rgba(232,201,106,.5), 0 2px 0 rgba(0,0,0,.8);
+font-weight:normal; margin-bottom:.1em;
+}
+.subtitle { color:#7aaa6a; font-size:clamp(.65rem,2.8vw,.9rem); letter-spacing:.4em; text-transform:uppercase; margin-bottom:2.8em; opacity:.75; }
+.ornament { width:110px; height:1px; background:linear-gradient(90deg,transparent,#e8c96a,transparent); margin:.9em auto; }
+#start-btn {
+background:transparent; border:1.5px solid rgba(232,201,106,.7); color:#e8c96a;
+padding:1em 2.8em; font-size:.95rem; letter-spacing:.35em; text-transform:uppercase;
+cursor:pointer; font-family:‘Georgia’,serif; border-radius:2px;
+transition: all .3s;
+}
+#start-btn:active { background:rgba(232,201,106,.1); }
+
+#hud {
+position:fixed; top:16px; left:16px; color:#d0eabc;
+font-size:.68rem; letter-spacing:.12em; line-height:2.1;
+text-shadow:0 1px 6px rgba(0,0,0,.9);
+}
+#biome-label {
+position:fixed; top:16px; right:16px; color:rgba(232,201,106,.65);
+font-size:.6rem; letter-spacing:.28em; text-transform:uppercase; text-align:right;
+text-shadow:0 1px 6px rgba(0,0,0,.9);
+}
+
+#interact-btn {
+position:fixed; right:24px; bottom:140px;
+width:68px; height:68px; border-radius:50%;
+background:rgba(232,201,106,.12); border:1.5px solid rgba(232,201,106,.65);
+color:#e8c96a; font-size:.65rem; letter-spacing:.06em; display:none;
+align-items:center; justify-content:center; flex-direction:column;
+cursor:pointer; text-align:center; z-index:20;
+box-shadow:0 0 20px rgba(232,201,106,.2);
+}
+#interact-btn.show { display:flex; }
+#interact-btn span { font-size:1.4rem; line-height:1.1; }
+
+#joystick-zone {
+position:fixed; left:0; bottom:0; width:50vw; height:48vw; max-height:210px;
+z-index:20; touch-action:none;
+}
+#joystick-base {
+position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+width:108px; height:108px; border-radius:50%;
+background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12);
+}
+#joystick-knob {
+position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+width:44px; height:44px; border-radius:50%;
+background:radial-gradient(circle at 35% 35%, rgba(232,201,106,.6), rgba(232,201,106,.25));
+border:1.5px solid rgba(232,201,106,.8);
+box-shadow:0 0 12px rgba(232,201,106,.3);
+}
+#cam-zone {
+position:fixed; right:0; bottom:0; width:50vw; height:100vh;
+z-index:15; touch-action:none;
+}
+#notif {
+position:fixed; top:38%; left:50%; transform:translateX(-50%);
+color:#e8c96a; font-size:.82rem; letter-spacing:.2em;
+background:rgba(5,15,5,.75); padding:.75em 2em;
+border:1px solid rgba(232,201,106,.35); backdrop-filter:blur(6px);
+opacity:0; transition:opacity .4s; z-index:50; text-align:center;
+pointer-events:none; white-space:nowrap; border-radius:3px;
+}
+
+/* VERSIÓN */
+#version-tag {
+position:fixed; bottom:8px; right:10px;
+color:rgba(232,201,106,.55); font-family:monospace;
+font-size:.65rem; letter-spacing:.05em;
+z-index:200; pointer-events:none;
+text-shadow:0 1px 4px rgba(0,0,0,.9);
+}
+
+/* TINTE ROJO DESHIDRATACIÓN */  #red-tint {
+position:fixed; inset:0; z-index:40;
+pointer-events:none;
+background: radial-gradient(ellipse at center,
+rgba(255,0,0,0) 0%,
+rgba(180,20,20,0) 40%,
+rgba(140,0,0,0) 100%);
+mix-blend-mode: multiply;
+opacity:0;
+transition: opacity .3s linear;
+}
+/* Pulso rítmico tipo latido cuando estás cerca de morir */
+@keyframes heartbeat {
+0%, 100% { filter: brightness(1); }
+20%      { filter: brightness(1.25); }
+40%      { filter: brightness(0.95); }
+60%      { filter: brightness(1.15); }
+}
+#red-tint.dying { animation: heartbeat 1.2s ease-in-out infinite; }
+
+/* MEDIDOR DE AGUA */
+#water-meter {
+position:fixed; top:16px; left:50%; transform:translateX(-50%);
+display:flex; gap:6px; z-index:25;
+}
+.drop {
+width:28px; height:36px;
+position:relative;
+filter: drop-shadow(0 0 6px rgba(0,0,0,.6));
+}
+.drop svg { width:100%; height:100%; display:block; }
+.drop .fill { transition: opacity .4s, transform .4s; transform-origin: center bottom; }
+.drop.empty .fill { opacity:.15; transform: scale(.6); }
+.drop.warn .fill { animation: pulse-warn 1s ease-in-out infinite; }
+@keyframes pulse-warn { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+
+/* OBJETIVO HUD */
+#goal-hud {
+position:fixed; top:60px; left:50%; transform:translateX(-50%);
+color:#e8c96a; font-size:.7rem; letter-spacing:.2em;
+text-shadow:0 1px 6px rgba(0,0,0,.95); text-align:center;
+line-height:1.6;
+}
+#goal-hud .progress { color:#cde8b0; font-size:.85rem; letter-spacing:.15em; }
+
+/* DIFICULTAD */
+.difficulty-row {
+display:flex; gap:14px; margin-bottom:1.6em;
+flex-direction:column; align-items:center;
+}
+.diff-btn {
+background:transparent; border:1px solid rgba(232,201,106,.35); color:#cde8b0;
+padding:.7em 2em; font-size:.8rem; letter-spacing:.25em; text-transform:uppercase;
+cursor:pointer; font-family:‘Georgia’,serif; border-radius:2px;
+transition: all .3s; min-width:240px;
+}
+.diff-btn .meta { display:block; font-size:.6rem; opacity:.7; letter-spacing:.15em; margin-top:.3em; color:#7aaa6a; }
+.diff-btn.selected { border-color:#e8c96a; background:rgba(232,201,106,.1); color:#e8c96a; }
+.diff-btn:active { background:rgba(232,201,106,.15); }
+
+/* PANTALLA FINAL */
+#end-screen {
+position:fixed; inset:0; z-index:150; display:none;
+flex-direction:column; align-items:center; justify-content:center;
+background:radial-gradient(ellipse at 50% 50%, rgba(8,16,8,.92), rgba(0,0,0,.96));
+backdrop-filter:blur(8px);
+}
+#end-screen.show { display:flex; }
+#end-screen.win h2 { color:#e8c96a; }
+#end-screen.lose h2 { color:#c45252; }
+#end-screen h2 {
+font-size:clamp(2rem,9vw,4rem); letter-spacing:.2em;
+font-weight:normal; margin-bottom:.2em;
+text-shadow:0 0 50px currentColor;
+}
+#end-screen .end-msg {
+color:#cde8b0; font-size:.85rem; letter-spacing:.2em;
+margin:1em 0 2.5em; text-align:center; line-height:1.8;
+}
+#end-screen button {
+background:transparent; border:1.5px solid rgba(232,201,106,.7); color:#e8c96a;
+padding:.9em 2.5em; font-size:.9rem; letter-spacing:.3em; text-transform:uppercase;
+cursor:pointer; font-family:‘Georgia’,serif; border-radius:2px;
+}
+
+/* BRIEFING SCREEN */
+#briefing {
+position:fixed; inset:0; z-index:120; display:none;
+flex-direction:column; align-items:center; justify-content:center;
+background:radial-gradient(ellipse at 50% 55%,#0d2210 0%,#030803 100%);
+padding:1.5em; overflow-y:auto;
+}
+#briefing.show { display:flex; }
+#briefing h2 {
+font-size:clamp(1.4rem,5vw,2.2rem); letter-spacing:.25em;
+color:#e8c96a; font-weight:normal; margin-bottom:.4em;
+text-shadow:0 0 30px rgba(232,201,106,.4);
+}
+#briefing .intro {
+color:#7aaa6a; font-size:.7rem; letter-spacing:.3em;
+text-transform:uppercase; margin-bottom:2em; text-align:center;
+}
+.mission-grid {
+display:flex; flex-wrap:wrap; gap:14px; justify-content:center;
+max-width:520px; margin-bottom:2em;
+}
+.mission-card {
+width:130px; padding:14px 10px; border-radius:6px;
+background:rgba(20,40,20,.4); border:1px solid rgba(232,201,106,.18);
+text-align:center;
+}
+.mission-card .preview {
+width:100px; height:100px; margin:0 auto .5em;
+border-radius:4px; background:rgba(0,0,0,.3);
+display:flex; align-items:center; justify-content:center;
+}
+.mission-card canvas { width:100%; height:100%; display:block; border-radius:4px; }
+.mission-card .name {
+color:#e8c96a; font-size:.75rem; letter-spacing:.1em;
+margin-bottom:.3em; line-height:1.3; min-height:2em;
+}
+.mission-card .qty {
+color:#cde8b0; font-size:1.4rem; letter-spacing:.05em;
+font-weight:bold;
+}
+.mission-card .qty::before { content:‘×’; opacity:.6; margin-right:.2em; font-size:1rem; }
+#briefing button {
+background:transparent; border:1.5px solid rgba(232,201,106,.75);
+color:#e8c96a; padding:.9em 2.8em; font-size:.9rem;
+letter-spacing:.3em; text-transform:uppercase;
+cursor:pointer; font-family:‘Georgia’,serif; border-radius:2px;
+transition:all .3s;
+}
+#briefing button:active { background:rgba(232,201,106,.12); }
+#briefing .hint {
+color:#7aaa6a99; font-size:.6rem; letter-spacing:.2em;
+text-align:center; margin-top:1em; font-style:italic;
+}
+</style>
+
+</head>
+<body>
+
+<div id="title-screen">
+  <h1>PACHA</h1>
+  <div class="ornament"></div>
+  <p class="subtitle">Bosque · Valle Central · Chile</p>
+  <div class="ornament"></div>
+  <div class="difficulty-row">
+    <button class="diff-btn selected" data-level="3">Básico<span class="meta">3 plantas</span></button>
+    <button class="diff-btn" data-level="5">Medio<span class="meta">5 plantas</span></button>
+    <button class="diff-btn" data-level="10">Avanzado<span class="meta">10 plantas</span></button>
+  </div>
+  <button id="start-btn">Comenzar</button>
+</div>
+
+<div id="hud">
+  <div>🌿 <span id="env-name">Claro del Bosque</span></div>
+</div>
+<div id="biome-label">Bosque<br>Esclerófilo</div>
+
+<!-- Medidor de agua: 2 gotas -->
+
+<div id="water-meter">
+  <div class="drop" id="drop-1">
+    <svg viewBox="0 0 28 36">
+      <path class="bg" d="M14 2 C 6 12, 4 22, 4 26 C 4 32, 9 34, 14 34 C 19 34, 24 32, 24 26 C 24 22, 22 12, 14 2 Z"
+            fill="rgba(255,255,255,.05)" stroke="rgba(120,200,230,.3)" stroke-width="1"/>
+      <path class="fill" d="M14 2 C 6 12, 4 22, 4 26 C 4 32, 9 34, 14 34 C 19 34, 24 32, 24 26 C 24 22, 22 12, 14 2 Z"
+            fill="url(#dropGrad1)"/>
+      <defs>
+        <linearGradient id="dropGrad1" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#80d0e8"/>
+          <stop offset="100%" stop-color="#3580a0"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+  <div class="drop" id="drop-2">
+    <svg viewBox="0 0 28 36">
+      <path class="bg" d="M14 2 C 6 12, 4 22, 4 26 C 4 32, 9 34, 14 34 C 19 34, 24 32, 24 26 C 24 22, 22 12, 14 2 Z"
+            fill="rgba(255,255,255,.05)" stroke="rgba(120,200,230,.3)" stroke-width="1"/>
+      <path class="fill" d="M14 2 C 6 12, 4 22, 4 26 C 4 32, 9 34, 14 34 C 19 34, 24 32, 24 26 C 24 22, 22 12, 14 2 Z"
+            fill="url(#dropGrad2)"/>
+      <defs>
+        <linearGradient id="dropGrad2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#80d0e8"/>
+          <stop offset="100%" stop-color="#3580a0"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+</div>
+
+<div id="goal-hud">
+  Objetivo<br>
+  <span class="progress"><span id="goal-current">0</span> / <span id="goal-total">3</span></span>
+</div>
+
+<!-- Tinte rojo de deshidratación -->
+
+<div id="red-tint"></div>
+
+<!-- Tag de versión (esquina inferior izquierda) -->
+
+<div id="version-tag">v0.2.0</div>
+
+<!-- Pantalla final -->
+
+<div id="end-screen">
+  <h2 id="end-title">Bien hecho</h2>
+  <div class="ornament"></div>
+  <div class="end-msg" id="end-msg"></div>
+  <div class="ornament"></div>
+  <button id="restart-btn">Volver al inicio</button>
+</div>
+
+<!-- Pantalla de briefing -->
+
+<div id="briefing">
+  <h2>Tu misión</h2>
+  <p class="intro">Encuentra y recolecta:</p>
+  <div class="mission-grid" id="mission-grid"></div>
+  <button id="briefing-start">Adentrarse al bosque</button>
+  <p class="hint">Otras plantas no contarán para esta misión</p>
+</div>
+
+<div id="joystick-zone">
+  <div id="joystick-base"><div id="joystick-knob"></div></div>
+</div>
+<div id="cam-zone"></div>
+<div id="interact-btn"><span>✦</span>Recoger</div>
+<div id="notif"></div>
+<canvas id="canvas"></canvas>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+//  RENDERER
+// ══════════════════════════════════════════════════════════════════
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x6da898);
+scene.fog = new THREE.FogExp2(0x6da898, 0.032);
+
+const camera = new THREE.PerspectiveCamera(62, window.innerWidth/window.innerHeight, 0.1, 200);
+
+// ══════════════════════════════════════════════════════════════════
+//  LIGHTING  — semi-realista: sol cálido + relleno frío + bounce
+// ══════════════════════════════════════════════════════════════════
+const ambient = new THREE.AmbientLight(0x90bfa8, 0.5);
+scene.add(ambient);
+
+const sun = new THREE.DirectionalLight(0xffecb0, 2.2);
+sun.position.set(25, 55, 15);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = sun.shadow.camera.bottom = -70;
+sun.shadow.camera.right = sun.shadow.camera.top = 70;
+sun.shadow.camera.far = 200;
+sun.shadow.bias = -0.0008;
+scene.add(sun);
+
+// Relleno frío (cielo)
+const skyFill = new THREE.DirectionalLight(0x7ab8d4, 0.55);
+skyFill.position.set(-15, 20, -25);
+scene.add(skyFill);
+
+// Bounce suelo (luz rebotada desde la vegetación)
+const groundBounce = new THREE.HemisphereLight(0x88cc60, 0x3a6020, 0.35);
+scene.add(groundBounce);
+
+// ══════════════════════════════════════════════════════════════════
+//  TERRAIN
+// ══════════════════════════════════════════════════════════════════
+const WORLD = 78, BOUND = 35;
+
+function hAt(x, z) {
+  const d = Math.sqrt(x*x + z*z);
+  return (Math.sin(x*.25)*Math.cos(z*.2)*.5 + Math.sin(x*.1+z*.15)*1.2)
+       * (1 - Math.min(d/(WORLD*.6), 1));
+}
+
+const groundGeo = new THREE.PlaneGeometry(WORLD, WORLD, 90, 90);
+groundGeo.rotateX(-Math.PI/2);
+const gPos = groundGeo.attributes.position;
+for (let i = 0; i < gPos.count; i++) {
+  const x = gPos.getX(i), z = gPos.getZ(i);
+  gPos.setY(i, Math.max(-0.3, hAt(x, z)));
+}
+gPos.needsUpdate = true;
+groundGeo.computeVertexNormals();
+
+// Terreno con vertex colors para variación de color
+const groundMat = new THREE.MeshLambertMaterial({ color: 0x4e7d30, vertexColors: false });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Snap exacto al mesh: interpolación bilineal sobre el grid de vértices.
+// El plano va de -WORLD/2..+WORLD/2 con (SEGS+1)x(SEGS+1) vértices.
+const SEGS = 90;
+const STEP = WORLD / SEGS;          // distancia entre vértices
+const HALF = WORLD / 2;
+// Cachear las alturas de cada vértice en una matriz lineal (rápido)
+const heightGrid = new Float32Array((SEGS+1)*(SEGS+1));
+{
+  const pos = groundGeo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    heightGrid[i] = pos.getY(i);
+  }
+}
+function meshGroundY(x, z) {
+  // Coordenadas relativas al esquina superior izquierda del plano
+  const fx = (x + HALF) / STEP;
+  const fz = (z + HALF) / STEP;
+  // Limitar al borde del mesh
+  if (fx < 0 || fx >= SEGS || fz < 0 || fz >= SEGS) return 0;
+  const ix = Math.floor(fx), iz = Math.floor(fz);
+  const tx = fx - ix, tz = fz - iz;
+  // Three.js PlaneGeometry: vértices ordenados por fila (z creciente).
+  // Tras rotateX(-PI/2), la fila z-índice corresponde al eje Z mundial.
+  const w = SEGS + 1;
+  const i00 = iz * w + ix;
+  const i10 = i00 + 1;
+  const i01 = i00 + w;
+  const i11 = i01 + 1;
+  // Interpolación bilineal
+  const h0 = heightGrid[i00] * (1 - tx) + heightGrid[i10] * tx;
+  const h1 = heightGrid[i01] * (1 - tx) + heightGrid[i11] * tx;
+  return h0 * (1 - tz) + h1 * tz;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ÁRBOLES
+// ══════════════════════════════════════════════════════════════════
+const treePos = [];
+
+function addTree(x, z, type) {
+  const g = new THREE.Group();
+  g.position.set(x, 0, z);
+
+  if (type === 0) { // Quillay — copa redondeada multicapa
+    const h = 3.8 + Math.random()*2.2;
+    const trGeo = new THREE.CylinderGeometry(.18+Math.random()*.06, .28+Math.random()*.08, h, 8);
+    const tr = new THREE.Mesh(trGeo, new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.07,.35,.28+Math.random()*.08)}));
+    tr.position.y = h/2; tr.castShadow = true; g.add(tr);
+    const layers = 3 + Math.floor(Math.random()*3);
+    for (let i = 0; i < layers; i++) {
+      const r = (1.6 - i*.2) + Math.random()*.35;
+      const canopy = new THREE.Mesh(
+        new THREE.SphereGeometry(r, 9, 7),
+        new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.28+Math.random()*.06, .55, .22+Math.random()*.1)})
+      );
+      canopy.position.set((Math.random()-.5)*.7, h+.3+i*.6, (Math.random()-.5)*.7);
+      canopy.scale.y = .8 + Math.random()*.25;
+      canopy.castShadow = true; g.add(canopy);
+    }
+  } else if (type === 1) { // Peumo — copa densa y oscura
+    const h = 3 + Math.random()*1.8;
+    const tr = new THREE.Mesh(
+      new THREE.CylinderGeometry(.14, .22, h, 8),
+      new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.07,.4,.22+Math.random()*.07)})
+    );
+    tr.position.y = h/2; tr.castShadow = true; g.add(tr);
+    // copa principal
+    const c1 = new THREE.Mesh(
+      new THREE.SphereGeometry(1.9+Math.random()*.5, 9, 8),
+      new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.27+Math.random()*.04, .5, .19+Math.random()*.07)})
+    );
+    c1.position.y = h+.6; c1.scale.set(1,.82,1); c1.castShadow = true; g.add(c1);
+    // copa secundaria offset
+    const c2 = new THREE.Mesh(
+      new THREE.SphereGeometry(1.2+Math.random()*.3, 8, 7),
+      new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.29+Math.random()*.04, .5, .21+Math.random()*.06)})
+    );
+    c2.position.set((Math.random()-.5)*.8, h+1.2, (Math.random()-.5)*.8);
+    c2.castShadow = true; g.add(c2);
+  } else { // Ciprés de la Cordillera — columnar, oscuro
+    const h = 5.5 + Math.random()*3.5;
+    const tr = new THREE.Mesh(
+      new THREE.CylinderGeometry(.1, .2, h, 8),
+      new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.07,.3,.22)})
+    );
+    tr.position.y = h/2; tr.castShadow = true; g.add(tr);
+    const lvls = 6 + Math.floor(Math.random()*4);
+    for (let i = 0; i < lvls; i++) {
+      const r = Math.max(.1, .95 - i*.1 + Math.random()*.05);
+      const cone = new THREE.Mesh(
+        new THREE.ConeGeometry(r, 1.3, 8),
+        new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.32+Math.random()*.03, .6, .18+Math.random()*.07)})
+      );
+      cone.position.y = 1.8 + i*.9 + (h - lvls*.9)*.45;
+      cone.castShadow = true; g.add(cone);
+    }
+  }
+  scene.add(g);
+  treePos.push(new THREE.Vector2(x, z));
+}
+
+for (let i = 0; i < 150; i++) {
+  const a = Math.random()*Math.PI*2;
+  const d = 4.5 + Math.random()*(BOUND-4.5);
+  const x = Math.cos(a)*d, z = Math.sin(a)*d;
+  if (x*x+z*z < 18) continue;
+  addTree(x, z, Math.floor(Math.random()*3));
+}
+
+// Rocas
+for (let i = 0; i < 36; i++) {
+  const a = Math.random()*Math.PI*2, d = 3+Math.random()*(BOUND-3);
+  const x = Math.cos(a)*d, z = Math.sin(a)*d, s = .2+Math.random()*.6;
+  const rock = new THREE.Mesh(
+    new THREE.DodecahedronGeometry(s, 0),
+    new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.07,.12,.4+Math.random()*.2)})
+  );
+  rock.position.set(x, hAt(x,z)+s*.2, z);
+  rock.rotation.set(Math.random()*2, Math.random()*6, Math.random()*2);
+  rock.castShadow = rock.receiveShadow = true;
+  scene.add(rock);
+}
+
+// Pasto
+for (let i = 0; i < 360; i++) {
+  const a = Math.random()*Math.PI*2, d = Math.random()*BOUND;
+  const x = Math.cos(a)*d, z = Math.sin(a)*d;
+  const h2 = .3+Math.random()*.5;
+  const blade = new THREE.Mesh(
+    new THREE.PlaneGeometry(.18, h2),
+    new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.3+Math.random()*.08,.7,.22+Math.random()*.12), side:THREE.DoubleSide})
+  );
+  blade.position.set(x, hAt(x,z)+h2/2, z);
+  blade.rotation.y = Math.random()*Math.PI;
+  blade.rotation.z = (Math.random()-.5)*.5;
+  scene.add(blade);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  AGUA — posición aleatoria por sesión
+// ══════════════════════════════════════════════════════════════════
+const pondGroup = new THREE.Group();
+scene.add(pondGroup);
+
+const pondGeo = new THREE.CircleGeometry(2.8, 24);
+pondGeo.rotateX(-Math.PI/2);
+const pond = new THREE.Mesh(pondGeo, new THREE.MeshLambertMaterial({color:0x3580a0, transparent:true, opacity:.85}));
+pond.position.y = .05;
+pondGroup.add(pond);
+
+const sparkGeo = new THREE.CircleGeometry(2.8, 24);
+sparkGeo.rotateX(-Math.PI/2);
+const sparkle = new THREE.Mesh(sparkGeo, new THREE.MeshBasicMaterial({color:0xaadff0, transparent:true, opacity:.25}));
+sparkle.position.y = .08;
+pondGroup.add(sparkle);
+
+// Orilla del estanque
+const rimGeo = new THREE.RingGeometry(2.8, 3.4, 24);
+rimGeo.rotateX(-Math.PI/2);
+const rim = new THREE.Mesh(rimGeo, new THREE.MeshLambertMaterial({color:0x5a7840, transparent:true, opacity:.7}));
+rim.position.y = .04;
+pondGroup.add(rim);
+
+// Posiciona la vertiente en una ubicación aleatoria respetando límites y árboles
+function placePond() {
+  let tries = 0;
+  while (tries++ < 400) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 6 + Math.random() * (BOUND - 8);
+    const x = Math.cos(a) * r;
+    const z = Math.sin(a) * r;
+    if (x*x + z*z < 36) continue;
+    let ok = true;
+    for (const tp of treePos) {
+      if (Math.hypot(x - tp.x, z - tp.y) < 4) { ok = false; break; }
+    }
+    if (!ok) continue;
+    const y = hAt(x, z);
+    pondGroup.position.set(x, y, z);
+    return { x, z };
+  }
+  // Fallback
+  const fbY = hAt(15, -10);
+  pondGroup.position.set(15, fbY, -10);
+  return { x: 15, z: -10 };
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  INTERACTUABLES — cada uno con identidad visual propia
+// ══════════════════════════════════════════════════════════════════
+const interactables = [];
+
+// Helper: material emissive (brilla con luz propia)
+function emissiveMat(color, emissive, intensity = 1) {
+  return new THREE.MeshLambertMaterial({
+    color, emissive, emissiveIntensity: intensity
+  });
+}
+
+// ─── MAQUI (arbusto pequeño con racimos de bayas violeta brillantes) ─────
+function makeMaqui(x, z) {
+  const g = new THREE.Group();
+  g.position.set(x, hAt(x,z), z);
+
+  // Tronco/tallos delgados
+  for (let s = 0; s < 4; s++) {
+    const stemH = .45 + Math.random()*.15;
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(.025, .035, stemH, 5),
+      new THREE.MeshLambertMaterial({color: 0x4a3520})
+    );
+    const a = (s/4)*Math.PI*2;
+    stem.position.set(Math.cos(a)*.08, stemH/2, Math.sin(a)*.08);
+    stem.rotation.z = (Math.random()-.5)*.4;
+    stem.castShadow = true;
+    g.add(stem);
+  }
+
+  // Hojas ovaladas verde oscuro
+  for (let i = 0; i < 14; i++) {
+    const leaf = new THREE.Mesh(
+      new THREE.SphereGeometry(.11, 6, 5),
+      new THREE.MeshLambertMaterial({color: new THREE.Color().setHSL(.32, .55, .18+Math.random()*.06)})
+    );
+    leaf.scale.set(1.4, .35, .85);
+    leaf.position.set((Math.random()-.5)*.45, .35+Math.random()*.35, (Math.random()-.5)*.45);
+    leaf.rotation.set(Math.random()*.5, Math.random()*Math.PI, Math.random()*.5);
+    g.add(leaf);
+  }
+
+  // Racimos de bayas violetas brillantes (lo distintivo)
+  const berries = [];
+  for (let cluster = 0; cluster < 3; cluster++) {
+    const cx = (Math.random()-.5)*.35;
+    const cy = .45 + Math.random()*.25;
+    const cz = (Math.random()-.5)*.35;
+    for (let b = 0; b < 7; b++) {
+      const berry = new THREE.Mesh(
+        new THREE.SphereGeometry(.055, 7, 6),
+        emissiveMat(0x4a0a78, 0x6a1099, .4)
+      );
+      berry.position.set(
+        cx + (Math.random()-.5)*.12,
+        cy + (Math.random()-.5)*.12,
+        cz + (Math.random()-.5)*.12
+      );
+      g.add(berry);
+      berries.push(berry);
+    }
+  }
+
+  interactables.push({
+    obj: g, type: 'comida', label: 'Maqui', species: 'maqui', radius: 2.5,
+    glowColor: 0x9020e0,
+    glowParts: berries, baseScale: 1
+  });
+  return g;
+}
+
+// ─── FRUTILLA DEL MONTE (matorral bajo con frutos rojos brillantes) ──────
+function makeFrutilla(x, z) {
+  const g = new THREE.Group();
+  g.position.set(x, hAt(x,z), z);
+
+  // Roseta de hojas trifoliadas a ras de suelo
+  for (let i = 0; i < 12; i++) {
+    const leaf = new THREE.Mesh(
+      new THREE.SphereGeometry(.13, 7, 5),
+      new THREE.MeshLambertMaterial({color: new THREE.Color().setHSL(.3, .65, .25+Math.random()*.08)})
+    );
+    leaf.scale.set(1.3, .2, 1);
+    const a = (i/12) * Math.PI * 2;
+    leaf.position.set(Math.cos(a)*.22, .08+Math.random()*.05, Math.sin(a)*.22);
+    leaf.rotation.y = a;
+    leaf.rotation.z = -.2;
+    g.add(leaf);
+  }
+
+  // Tallitos finos con frutos
+  const fruits = [];
+  for (let f = 0; f < 6; f++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = .15 + Math.random() * .15;
+    // tallo
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(.012, .015, .18, 4),
+      new THREE.MeshLambertMaterial({color: 0x2a5018})
+    );
+    stem.position.set(Math.cos(a)*r, .15, Math.sin(a)*r);
+    g.add(stem);
+    // fruto rojo
+    const fruit = new THREE.Mesh(
+      new THREE.SphereGeometry(.07, 8, 7),
+      emissiveMat(0xd02020, 0xff4040, .5)
+    );
+    fruit.scale.set(1, 1.15, 1);
+    fruit.position.set(Math.cos(a)*r, .26, Math.sin(a)*r);
+    g.add(fruit);
+    fruits.push(fruit);
+
+    // Pequeñas semillas amarillas en el fruto (puntos)
+    for (let s = 0; s < 5; s++) {
+      const seed = new THREE.Mesh(
+        new THREE.SphereGeometry(.008, 4, 3),
+        new THREE.MeshBasicMaterial({color: 0xffe080})
+      );
+      const sa = Math.random() * Math.PI * 2;
+      const sb = Math.random() * Math.PI;
+      seed.position.set(
+        Math.cos(a)*r + Math.sin(sb)*Math.cos(sa)*.07,
+        .26 + Math.cos(sb)*.07,
+        Math.sin(a)*r + Math.sin(sb)*Math.sin(sa)*.07
+      );
+      g.add(seed);
+    }
+  }
+
+  // Halo rojo cálido
+  // (eliminado)
+
+  interactables.push({
+    obj: g, type: 'comida', label: 'Frutilla del Monte', species: 'frutilla', radius: 2.5,
+    glowColor: 0xff5040,
+    glowParts: fruits, baseScale: 1
+  });
+  return g;
+}
+
+// ─── PEUMO (frutos color caoba en racimos) ───────────────────────────────
+function makePeumoFruit(x, z) {
+  const g = new THREE.Group();
+  g.position.set(x, hAt(x,z), z);
+
+  // Pequeño arbusto / brote joven
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(.05, .08, .55, 6),
+    new THREE.MeshLambertMaterial({color: 0x5a3818})
+  );
+  trunk.position.y = .27;
+  trunk.castShadow = true;
+  g.add(trunk);
+
+  // Follaje en forma de copa pequeña
+  for (let i = 0; i < 5; i++) {
+    const foliage = new THREE.Mesh(
+      new THREE.SphereGeometry(.25 + Math.random()*.08, 7, 6),
+      new THREE.MeshLambertMaterial({color: new THREE.Color().setHSL(.27, .55, .22)})
+    );
+    foliage.position.set((Math.random()-.5)*.25, .55+Math.random()*.2, (Math.random()-.5)*.25);
+    foliage.scale.y = .85;
+    g.add(foliage);
+  }
+
+  // Frutos caoba brillante (esféricos, pequeños, en racimos)
+  const fruits = [];
+  for (let cluster = 0; cluster < 4; cluster++) {
+    const cx = (Math.random()-.5)*.35;
+    const cz = (Math.random()-.5)*.35;
+    const cy = .55 + Math.random()*.2;
+    for (let b = 0; b < 5; b++) {
+      const fruit = new THREE.Mesh(
+        new THREE.SphereGeometry(.045, 7, 6),
+        emissiveMat(0x8a4810, 0xc06820, .35)
+      );
+      fruit.position.set(
+        cx + (Math.random()-.5)*.1,
+        cy + (Math.random()-.5)*.08,
+        cz + (Math.random()-.5)*.1
+      );
+      g.add(fruit);
+      fruits.push(fruit);
+    }
+  }
+
+  interactables.push({
+    obj: g, type: 'comida', label: 'Peumo (fruto)', species: 'peumo', radius: 2.5,
+    glowColor: 0xe09040,
+    glowParts: fruits, baseScale: 1
+  });
+  return g;
+}
+
+// ─── PALQUI (arbusto vertical con flores tubulares amarillo-verdes) ──────
+function makePalqui(x, z) {
+  const g = new THREE.Group();
+  g.position.set(x, hAt(x,z), z);
+
+  // Tallos verticales múltiples
+  for (let s = 0; s < 5; s++) {
+    const stemH = .6 + Math.random()*.3;
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(.018, .028, stemH, 5),
+      new THREE.MeshLambertMaterial({color: 0x3a5a20})
+    );
+    const a = (s/5)*Math.PI*2;
+    stem.position.set(Math.cos(a)*.06, stemH/2, Math.sin(a)*.06);
+    stem.rotation.z = (Math.random()-.5)*.2;
+    stem.castShadow = true;
+    g.add(stem);
+  }
+
+  // Hojas alargadas
+  for (let i = 0; i < 18; i++) {
+    const leaf = new THREE.Mesh(
+      new THREE.PlaneGeometry(.08, .25),
+      new THREE.MeshLambertMaterial({
+        color: new THREE.Color().setHSL(.32, .65, .28+Math.random()*.08),
+        side: THREE.DoubleSide
+      })
+    );
+    leaf.position.set((Math.random()-.5)*.18, .15+Math.random()*.7, (Math.random()-.5)*.18);
+    leaf.rotation.y = Math.random()*Math.PI;
+    leaf.rotation.z = (Math.random()-.5)*.3;
+    g.add(leaf);
+  }
+
+  // Flores tubulares amarillo-verdes brillantes en la punta (lo característico del palqui)
+  const flowers = [];
+  for (let f = 0; f < 8; f++) {
+    const a = (f/8)*Math.PI*2;
+    const r = .1 + Math.random()*.06;
+    // tubo de flor
+    const tube = new THREE.Mesh(
+      new THREE.CylinderGeometry(.02, .04, .12, 6),
+      emissiveMat(0xc8d030, 0xeae840, .5)
+    );
+    tube.position.set(Math.cos(a)*r, .85+Math.random()*.1, Math.sin(a)*r);
+    tube.rotation.z = (Math.random()-.5)*.4;
+    g.add(tube);
+    flowers.push(tube);
+
+    // pequeña esfera al final (corola)
+    const corolla = new THREE.Mesh(
+      new THREE.SphereGeometry(.035, 6, 5),
+      emissiveMat(0xd8e040, 0xffff60, .6)
+    );
+    corolla.position.set(Math.cos(a)*r, .94+Math.random()*.1, Math.sin(a)*r);
+    g.add(corolla);
+    flowers.push(corolla);
+  }
+
+  interactables.push({
+    obj: g, type: 'hierba', label: 'Palqui', species: 'palqui', radius: 2.5,
+    glowColor: 0xa0c020,
+    glowParts: flowers, baseScale: 1
+  });
+  return g;
+}
+
+// ─── MATICO (hojas grandes lanceoladas con núcleo brillante) ─────────────
+function makeMatico(x, z) {
+  const g = new THREE.Group();
+  g.position.set(x, hAt(x,z), z);
+
+  // Hojas grandes lanceoladas en abanico (lo característico del matico)
+  const leaves = [];
+  for (let i = 0; i < 9; i++) {
+    const a = (i/9) * Math.PI * 2;
+    const leaf = new THREE.Mesh(
+      new THREE.PlaneGeometry(.18, .55),
+      new THREE.MeshLambertMaterial({
+        color: new THREE.Color().setHSL(.34, .7, .26+Math.random()*.08),
+        side: THREE.DoubleSide
+      })
+    );
+    leaf.position.set(
+      Math.cos(a)*.12,
+      .3 + Math.random()*.1,
+      Math.sin(a)*.12
+    );
+    leaf.rotation.y = a;
+    leaf.rotation.z = -.4 - Math.random()*.2;
+    leaf.rotation.x = Math.random()*.2;
+    g.add(leaf);
+    leaves.push(leaf);
+  }
+
+  // Tallo central
+  const stem = new THREE.Mesh(
+    new THREE.CylinderGeometry(.025, .035, .4, 5),
+    new THREE.MeshLambertMaterial({color: 0x4a6020})
+  );
+  stem.position.y = .2;
+  g.add(stem);
+
+  // Núcleo luminoso central (espiga característica del matico)
+  const core = new THREE.Mesh(
+    new THREE.CylinderGeometry(.035, .025, .2, 6),
+    emissiveMat(0xe8d060, 0xfff080, .8)
+  );
+  core.position.y = .55;
+  g.add(core);
+
+  // Pequeñas flores blancas en la espiga
+  const florets = [];
+  for (let i = 0; i < 8; i++) {
+    const f = new THREE.Mesh(
+      new THREE.SphereGeometry(.015, 5, 4),
+      emissiveMat(0xfffadc, 0xffffff, .9)
+    );
+    const a = Math.random() * Math.PI * 2;
+    f.position.set(Math.cos(a)*.04, .47+i*.018, Math.sin(a)*.04);
+    g.add(f);
+    florets.push(f);
+  }
+
+  interactables.push({
+    obj: g, type: 'hierba', label: 'Matico', species: 'matico', radius: 2.5,
+    glowColor: 0xfff0a0,
+    glowParts: [core, ...florets], baseScale: 1
+  });
+  return g;
+}
+
+// ─── Plantas se generarán dinámicamente al iniciar (según dificultad) ────
+const plantBuilders = [
+  { fn: makeMaqui,       label: 'Maqui',              key: 'maqui'    },
+  { fn: makeFrutilla,    label: 'Frutilla del Monte', key: 'frutilla' },
+  { fn: makePeumoFruit,  label: 'Peumo (fruto)',      key: 'peumo'    },
+  { fn: makePalqui,      label: 'Palqui',             key: 'palqui'   },
+  { fn: makeMatico,      label: 'Matico',             key: 'matico'   },
+];
+const plantBuildersByKey = Object.fromEntries(plantBuilders.map(b => [b.key, b]));
+
+// Genera la composición de la misión: cantidades por especie con repeticiones
+// Ej: para goal=5 podría devolver { maqui:2, palqui:2, frutilla:1 }
+function generateMission(goal) {
+  const mission = {};
+  for (let i = 0; i < goal; i++) {
+    const builder = plantBuilders[Math.floor(Math.random() * plantBuilders.length)];
+    mission[builder.key] = (mission[builder.key] || 0) + 1;
+  }
+  return mission;
+}
+
+// Posiciones aleatorias para sembrar plantas: distribución uniforme en
+// toda la zona explorable, evitando árboles, vertiente y el punto de inicio.
+function generatePlantPositions(n, pondPos) {
+  const positions = [];
+  const minDist     = 4.5;  // separación entre plantas
+  const minTreeDist = 1.5;  // separación de árboles
+  const minPondDist = 5.5;  // separación de la vertiente
+  const minStart    = 4;    // separación del punto inicial (origen)
+  const margin      = 2;    // margen al borde
+  const half        = BOUND - margin;
+  let tries = 0;
+  while (positions.length < n && tries < 2000) {
+    tries++;
+    // Distribución cuadrada en toda la zona explorable
+    const x = (Math.random() - .5) * 2 * half;
+    const z = (Math.random() - .5) * 2 * half;
+    // Lejos del centro inicial (jugador)
+    if (x*x + z*z < minStart*minStart) continue;
+    // Lejos de la vertiente
+    if (pondPos && Math.hypot(x - pondPos.x, z - pondPos.z) < minPondDist) continue;
+    // Lejos de otras plantas
+    let ok = true;
+    for (const p of positions) {
+      if (Math.hypot(x - p.x, z - p.z) < minDist) { ok = false; break; }
+    }
+    if (!ok) continue;
+    // Lejos de árboles
+    for (const tp of treePos) {
+      if (Math.hypot(x - tp.x, z - tp.y) < minTreeDist) { ok = false; break; }
+    }
+    if (!ok) continue;
+    positions.push({ x, z });
+  }
+  return positions;
+}
+
+// Siembra el bosque: plantas de la misión + ~35% extra como ruido
+function plantWorld(mission, pondPos) {
+  // 1) Lista de "exigidas" expandida (cada elemento = una planta a colocar)
+  const required = [];
+  for (const [key, count] of Object.entries(mission)) {
+    for (let i = 0; i < count; i++) required.push(key);
+  }
+  // 2) Calcular cantidad de ruido (35% del total mostrado en el mundo)
+  const decoyCount = Math.max(1, Math.round(required.length * 0.35 / 0.65));
+  const decoys = [];
+  for (let i = 0; i < decoyCount; i++) {
+    const builder = plantBuilders[Math.floor(Math.random() * plantBuilders.length)];
+    decoys.push(builder.key);
+  }
+  const allKeys = required.concat(decoys);
+  // 3) Mezclar
+  for (let i = allKeys.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [allKeys[i], allKeys[j]] = [allKeys[j], allKeys[i]];
+  }
+  // 4) Sembrar en posiciones aleatorias por todo el mundo
+  const positions = generatePlantPositions(allKeys.length, pondPos);
+  for (let i = 0; i < positions.length; i++) {
+    const key = allKeys[i];
+    const builder = plantBuildersByKey[key];
+    scene.add(builder.fn(positions[i].x, positions[i].z));
+  }
+  // 5) Marcar como decoy las plantas que exceden la cuota
+  const remainingQuota = { ...mission };
+  for (const item of interactables) {
+    if (item.type === 'agua') continue;
+    if ((remainingQuota[item.species] || 0) > 0) {
+      remainingQuota[item.species]--;
+      item.isDecoy = false;
+    } else {
+      item.isDecoy = true;
+    }
+  }
+}
+
+// ─── VERTIENTE — gotas orbitando (sin halo) ──────────────────────────────
+const waterDrops = [];
+for (let i = 0; i < 6; i++) {
+  const drop = new THREE.Mesh(
+    new THREE.SphereGeometry(.07, 6, 5),
+    emissiveMat(0x80e0ff, 0xa0f0ff, .8)
+  );
+  drop.userData.phase = (i/6) * Math.PI * 2;
+  drop.userData.height = .2 + Math.random()*.4;
+  drop.userData.radius = 2 + Math.random()*.6;
+  scene.add(drop);
+  waterDrops.push(drop);
+}
+
+interactables.push({
+  obj: pondGroup, type: 'agua', label: 'Vertiente', radius: 4.5,
+  glowColor: 0x60d0ff,
+  glowParts: waterDrops, baseScale: 1,
+  isWater: true
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  PERSONAJE AYMARA — versión mejorada semi-realista
+// ══════════════════════════════════════════════════════════════════
+const char = new THREE.Group();
+scene.add(char);
+
+// Paleta de colores
+const C = {
+  skin:     0xb86838,   // piel morena cálida
+  skinDark: 0x9a5228,   // sombra piel
+  hair:     0x120808,   // negro azabache
+  poncho1:  0x8a1818,   // rojo vino oscuro
+  poncho2:  0xaa2020,   // rojo vino claro (franjas)
+  belt:     0xd4a020,   // ocre dorado
+  beltDark: 0xa07818,
+  chulloPr: 0xcc2828,   // rojo chullo
+  chulloSc: 0xe8b020,   // amarillo chullo
+  chulloGr: 0x185a18,   // verde chullo
+  pant:     0x2a2018,   // pantalón oscuro
+  sandal:   0x7a5030,   // sandalia cuero
+  eye:      0x1a0f05,
+};
+
+function mat(c, opts={}) {
+  return new THREE.MeshLambertMaterial({color:c, ...opts});
+}
+function mesh(geo, c, opts={}) {
+  const m = new THREE.Mesh(geo, mat(c, opts));
+  m.castShadow = true;
+  return m;
+}
+
+// ── PIES / SANDALIAS ─────────────────────────────────────────────
+const footL = mesh(new THREE.BoxGeometry(.13,.05,.22), C.sandal);
+footL.position.set(-.13, .04, .04);
+const footR = footL.clone();
+footR.position.set(.13, .04, .04);
+char.add(footL, footR);
+
+// ── PIERNAS ──────────────────────────────────────────────────────
+// Cada pierna es un grupo con muslo + pantorrilla + pie
+function buildLeg(side) {
+  const g = new THREE.Group();
+  g.position.set(side*.13, .56, 0);
+
+  // muslo
+  const thigh = mesh(new THREE.CylinderGeometry(.095,.105,.42,8), C.pant);
+  thigh.position.y = -.21;
+  g.add(thigh);
+
+  // rodilla (esfera pequeña)
+  const knee = mesh(new THREE.SphereGeometry(.1,7,6), C.pant);
+  knee.position.y = -.44;
+  g.add(knee);
+
+  // pantorrilla
+  const shin = mesh(new THREE.CylinderGeometry(.075,.095,.38,8), C.pant);
+  shin.position.y = -.65;
+  g.add(shin);
+
+  // tobillo / sandalia
+  const foot = mesh(new THREE.BoxGeometry(.13,.05,.22), C.sandal);
+  foot.position.set(0,-.86,.04);
+  g.add(foot);
+
+  // tira de sandalia
+  const strap = mesh(new THREE.BoxGeometry(.14,.04,.04), C.sandal);
+  strap.position.set(0,-.82,.11);
+  g.add(strap);
+
+  return g;
+}
+const legL = buildLeg(-1); char.add(legL);
+const legR = buildLeg(1);  char.add(legR);
+
+// ── CADERA / TORSO BASE ───────────────────────────────────────────
+const hipsGeo = new THREE.CylinderGeometry(.22,.26,.25,10);
+const hips = mesh(hipsGeo, C.pant);
+hips.position.y = .68;
+char.add(hips);
+
+// ── TORSO ─────────────────────────────────────────────────────────
+// Torso con forma más humana (más ancho en hombros)
+const torsoGeo = new THREE.CylinderGeometry(.26,.22,.58,10);
+const torso = mesh(torsoGeo, C.poncho1);
+torso.position.y = 1.08;
+char.add(torso);
+
+// ── PONCHO ────────────────────────────────────────────────────────
+// Capa exterior del poncho, más ancha
+const ponchoOuter = mesh(
+  new THREE.CylinderGeometry(.38,.42,.52,10,1,true),
+  C.poncho1, {side:THREE.DoubleSide}
+);
+ponchoOuter.position.y = 1.09;
+char.add(ponchoOuter);
+
+// Franja decorativa del poncho (ocre)
+const ponchoStripe = mesh(
+  new THREE.CylinderGeometry(.385,.425,.06,10,1,true),
+  C.belt, {side:THREE.DoubleSide}
+);
+ponchoStripe.position.y = 1.22;
+char.add(ponchoStripe);
+
+const ponchoStripe2 = ponchoStripe.clone();
+ponchoStripe2.position.y = .98;
+char.add(ponchoStripe2);
+
+// Cinturón
+const beltMesh = mesh(new THREE.CylinderGeometry(.24,.24,.07,10), C.belt);
+beltMesh.position.y = .82;
+char.add(beltMesh);
+
+// Hebilla del cinturón
+const buckle = mesh(new THREE.BoxGeometry(.07,.06,.06), C.beltDark);
+buckle.position.set(0,.82,.24);
+char.add(buckle);
+
+// ── HOMBROS ───────────────────────────────────────────────────────
+function buildShoulder(side) {
+  const s = mesh(new THREE.SphereGeometry(.13,7,6), C.poncho1);
+  s.position.set(side*.3, 1.32, 0);
+  s.scale.set(1,.85,1);
+  return s;
+}
+char.add(buildShoulder(-1));
+char.add(buildShoulder(1));
+
+// ── BRAZOS ────────────────────────────────────────────────────────
+function buildArm(side) {
+  const g = new THREE.Group();
+  g.position.set(side*.32, 1.28, 0);
+
+  // brazo superior
+  const upper = mesh(new THREE.CylinderGeometry(.075,.065,.38,7), C.poncho2);
+  upper.position.y = -.19;
+  upper.rotation.z = side * .12;
+  g.add(upper);
+
+  // codo
+  const elbow = mesh(new THREE.SphereGeometry(.072,7,6), C.skin);
+  elbow.position.y = -.4;
+  g.add(elbow);
+
+  // antebrazo
+  const forearm = mesh(new THREE.CylinderGeometry(.062,.055,.32,7), C.skin);
+  forearm.position.y = -.58;
+  g.add(forearm);
+
+  // mano
+  const hand = mesh(new THREE.SphereGeometry(.07,7,6), C.skin);
+  hand.position.y = -.76;
+  hand.scale.set(1,.75,1.1);
+  g.add(hand);
+
+  g.rotation.z = side * .18;
+  return g;
+}
+const armL = buildArm(-1); char.add(armL);
+const armR = buildArm(1);  char.add(armR);
+
+// ── CUELLO ────────────────────────────────────────────────────────
+const neck = mesh(new THREE.CylinderGeometry(.1,.12,.16,8), C.skin);
+neck.position.y = 1.48;
+char.add(neck);
+
+// ── CABEZA ────────────────────────────────────────────────────────
+// Forma más humana: esferoide ligeramente aplastado
+const headGeo = new THREE.SphereGeometry(.22, 12, 10);
+const head = mesh(headGeo, C.skin);
+head.position.y = 1.73;
+head.scale.set(1, 1.08, .96);
+char.add(head);
+
+// Mandíbula / mentón
+const chin = mesh(new THREE.SphereGeometry(.12, 8, 7), C.skin);
+chin.position.set(0, 1.59, .1);
+chin.scale.set(1,.6,1.1);
+char.add(chin);
+
+// Nariz
+const nose = mesh(new THREE.SphereGeometry(.04, 6, 5), C.skinDark);
+nose.position.set(0, 1.73, .22);
+nose.scale.set(.8,.7,1.2);
+char.add(nose);
+
+// Ojos
+function buildEye(side) {
+  const socket = mesh(new THREE.SphereGeometry(.052,7,6), 0x8a4820);
+  socket.position.set(side*.09, 1.76, .19);
+  socket.scale.set(1,.85,1);
+  const iris = mesh(new THREE.SphereGeometry(.038,7,6), C.eye);
+  iris.position.set(side*.09, 1.76, .21);
+  const shine = mesh(new THREE.SphereGeometry(.016,5,5), 0xeeeeff);
+  shine.position.set(side*.092, 1.775, .225);
+  // Ceja
+  const brow = mesh(new THREE.BoxGeometry(.1,.022,.04), C.hair);
+  brow.position.set(side*.09, 1.815, .185);
+  brow.rotation.z = side * -.08;
+  return [socket, iris, shine, brow];
+}
+buildEye(-1).forEach(m=>char.add(m));
+buildEye(1).forEach(m=>char.add(m));
+
+// Boca (línea)
+const mouthGeo = new THREE.BoxGeometry(.1,.022,.03);
+const mouth = mesh(mouthGeo, 0x7a3818);
+mouth.position.set(0, 1.67, .215);
+char.add(mouth);
+
+// ── CABELLO ───────────────────────────────────────────────────────
+// Cabello negro trenzado posterior
+const hairBack = mesh(new THREE.SphereGeometry(.22,10,9), C.hair);
+hairBack.position.set(0, 1.74, -.06);
+hairBack.scale.set(1.02, 1.05, 1.0);
+char.add(hairBack);
+
+// Trenza
+const braidGeo = new THREE.CylinderGeometry(.04, .025, .55, 6);
+const braid = mesh(braidGeo, C.hair);
+braid.position.set(0, 1.42, -.18);
+braid.rotation.x = .25;
+char.add(braid);
+// nudo de trenza
+const braidEnd = mesh(new THREE.SphereGeometry(.05,6,5), C.hair);
+braidEnd.position.set(0, 1.14, -.22);
+char.add(braidEnd);
+
+// ── CHULLO (gorro andino tejido) ─────────────────────────────────
+// Base del chullo
+const chulloBase = mesh(new THREE.CylinderGeometry(.195,.23,.2,10), C.chulloPr);
+chulloBase.position.y = 1.9;
+char.add(chulloBase);
+
+// Cuerpo del chullo
+const chulloBody = mesh(new THREE.CylinderGeometry(.175,.2,.22,10), C.chulloPr);
+chulloBody.position.y = 2.08;
+char.add(chulloBody);
+
+// Franjas decorativas del chullo
+const stripe1 = mesh(new THREE.CylinderGeometry(.198,.225,.05,10,1,true), C.chulloSc, {side:THREE.DoubleSide});
+stripe1.position.y = 1.93;
+char.add(stripe1);
+
+const stripe2 = stripe1.clone();
+stripe2.position.y = 2.05;
+stripe2.material = mat(C.chulloGr, {side:THREE.DoubleSide});
+char.add(stripe2);
+
+// Punta del chullo
+const chulloPeak = mesh(new THREE.ConeGeometry(.13,.3,10), C.chulloPr);
+chulloPeak.position.y = 2.25;
+char.add(chulloPeak);
+
+// Pompón en la punta
+const pompon = mesh(new THREE.SphereGeometry(.06,7,6), C.chulloSc);
+pompon.position.y = 2.42;
+char.add(pompon);
+
+// Orejeras del chullo (lanas colgantes)
+function buildEarFlap(side) {
+  const g = new THREE.Group();
+  g.position.set(side*.19, 1.89, 0);
+  const flap = mesh(new THREE.BoxGeometry(.1,.2,.04), C.chulloPr);
+  flap.position.y = -.1;
+  g.add(flap);
+  // flecos
+  for (let i = 0; i < 3; i++) {
+    const fringe = mesh(new THREE.CylinderGeometry(.012,.008,.12,4), C.chulloSc);
+    fringe.position.set((i-.1)*.035, -.24, 0);
+    g.add(fringe);
+  }
+  return g;
+}
+char.add(buildEarFlap(-1));
+char.add(buildEarFlap(1));
+
+// ── SOMBRA PROPIA (disco bajo el personaje) ───────────────────────
+const shadowDisc = new THREE.Mesh(
+  new THREE.CircleGeometry(.45, 14),
+  new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.28})
+);
+shadowDisc.rotation.x = -Math.PI/2;
+shadowDisc.position.y = .02;
+char.add(shadowDisc);
+
+// Referencia de partes para animación
+const animParts = { legL, legR, armL, armR, head, chulloPeak, pompon };
+
+// ══════════════════════════════════════════════════════════════════
+//  CÁMARA
+// ══════════════════════════════════════════════════════════════════
+let camYaw = 0, camPitch = .4, camDist = 6.5;
+const camTarget = new THREE.Vector3();
+
+// ══════════════════════════════════════════════════════════════════
+//  CONTROLES TÁCTILES
+// ══════════════════════════════════════════════════════════════════
+const jZone = document.getElementById('joystick-zone');
+const jBase = document.getElementById('joystick-base');
+const jKnob = document.getElementById('joystick-knob');
+const JR = 50;
+let jActive=false, jId=-1, jDx=0, jDy=0, jCx=0, jCy=0;
+
+jZone.addEventListener('touchstart', e=>{
+  e.preventDefault(); if(jActive) return;
+  const t=e.changedTouches[0], r=jZone.getBoundingClientRect();
+  jCx=t.clientX-r.left; jCy=t.clientY-r.top;
+  jBase.style.left=jCx+'px'; jBase.style.top=jCy+'px';
+  jBase.style.transform='translate(-50%,-50%)';
+  jId=t.identifier; jActive=true; jDx=jDy=0;
+},{passive:false});
+
+jZone.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches){
+    if(t.identifier!==jId) continue;
+    const r=jZone.getBoundingClientRect();
+    let dx=t.clientX-r.left-jCx, dy=t.clientY-r.top-jCy;
+    const len=Math.sqrt(dx*dx+dy*dy);
+    if(len>JR){dx=dx/len*JR;dy=dy/len*JR;}
+    jDx=dx/JR; jDy=dy/JR;
+    jKnob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
+  }
+},{passive:false});
+
+function resetJoy(){ jActive=false;jId=-1;jDx=jDy=0;jKnob.style.transform='translate(-50%,-50%)'; }
+jZone.addEventListener('touchend',e=>{for(const t of e.changedTouches)if(t.identifier===jId)resetJoy();},{passive:false});
+jZone.addEventListener('touchcancel',resetJoy,{passive:false});
+
+const cZone = document.getElementById('cam-zone');
+let cId=-1,cLx=0,cLy=0;
+cZone.addEventListener('touchstart',e=>{e.preventDefault();if(cId>=0)return;const t=e.changedTouches[0];cId=t.identifier;cLx=t.clientX;cLy=t.clientY;},{passive:false});
+cZone.addEventListener('touchmove',e=>{e.preventDefault();for(const t of e.changedTouches){if(t.identifier!==cId)continue;camYaw-=(t.clientX-cLx)*.005;camPitch-=(t.clientY-cLy)*.005;camPitch=Math.max(.06,Math.min(1.1,camPitch));cLx=t.clientX;cLy=t.clientY;}},{passive:false});
+function resetCam(){cId=-1;}
+cZone.addEventListener('touchend',e=>{for(const t of e.changedTouches)if(t.identifier===cId)resetCam();},{passive:false});
+cZone.addEventListener('touchcancel',resetCam,{passive:false});
+
+// Mouse desktop
+let mDown=false,mLx=0,mLy=0;
+canvas.addEventListener('mousedown',e=>{mDown=true;mLx=e.clientX;mLy=e.clientY;});
+window.addEventListener('mouseup',()=>mDown=false);
+window.addEventListener('mousemove',e=>{if(!mDown)return;camYaw-=(e.clientX-mLx)*.004;camPitch-=(e.clientY-mLy)*.004;camPitch=Math.max(.06,Math.min(1.1,camPitch));mLx=e.clientX;mLy=e.clientY;});
+
+const keys={};
+window.addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='KeyE'&&nearItem)doInteract(nearItem);});
+window.addEventListener('keyup',e=>keys[e.code]=false);
+
+// ══════════════════════════════════════════════════════════════════
+//  UI
+// ══════════════════════════════════════════════════════════════════
+const interactBtn = document.getElementById('interact-btn');
+let nearItem = null;
+interactBtn.addEventListener('click',()=>{if(nearItem)doInteract(nearItem);});
+interactBtn.addEventListener('touchend',e=>{e.preventDefault();if(nearItem)doInteract(nearItem);});
+
+const notifEl = document.getElementById('notif');
+let notifTimer=null;
+function showNotif(txt){
+  notifEl.textContent=txt; notifEl.style.opacity='1';
+  clearTimeout(notifTimer);
+  notifTimer=setTimeout(()=>notifEl.style.opacity='0',2600);
+}
+function doInteract(item){
+  if(gameOver || item.collected || item.collecting) return;
+
+  if(item.type === 'agua'){
+    // Beber siempre reinicia el temporizador (1m30s totales nuevamente),
+    // aunque ya estés en el nivel máximo
+    game.water = game.waterMax;
+    game.waterTimer = 0;
+    updateWaterMeter();
+    redTint.style.opacity = '0';
+    redTint.classList.remove('dying');
+    showNotif(`💧 Bebiste de la ${item.label}`);
+    return;
+  }
+
+  // Recolectar planta — siempre desaparece
+  item.collecting = true;
+  item.collectT = 0;
+  item.collectStartScale = item.obj.scale.x || 1;
+  item.collectStartY = item.obj.position.y;
+
+  // Verificar si esta especie está en la misión y si aún hay cupo.
+  // No importa si la instancia fue marcada como "decoy": cualquier planta
+  // de una especie buscada cuenta mientras falte cupo de esa especie.
+  const needed = game.mission[item.species] || 0;
+  const haveOf = game.collectedBySpecies[item.species] || 0;
+  const counts = needed > 0 && haveOf < needed;
+
+  if(counts){
+    game.collectedBySpecies[item.species] = haveOf + 1;
+    game.collected++;
+    document.getElementById('goal-current').textContent = game.collected;
+    showNotif(`✦ ${item.label} (${haveOf+1}/${needed})`);
+    if(game.collected >= game.goal){
+      setTimeout(() => endGame(true), 800);
+    }
+  } else {
+    // No suma: o no es de la misión, o ya completaste el cupo
+    if(needed > 0 && haveOf >= needed){
+      showNotif(`⚠ ${item.label} — ya tenías suficientes`);
+    } else {
+      showNotif(`⚠ ${item.label} — no es parte de la misión`);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  FAUNA — ZORRO CULPEO (Lycalopex culpaeus)
+// ══════════════════════════════════════════════════════════════════
+// Paleta del zorro culpeo: rojizo-canela en lomo, vientre crema,
+// pelaje oscuro en patas y punta de cola
+const FOX_C = {
+  body:    new THREE.Color(0x9c5028),   // rojizo canela principal
+  belly:   new THREE.Color(0xd9b890),   // vientre crema claro
+  legs:    new THREE.Color(0x4a2818),   // patas oscuras
+  tailTip: new THREE.Color(0x1a0f08),   // punta de cola negra
+  ear:     new THREE.Color(0x2a1408),
+  eye:     new THREE.Color(0x1a1006),
+};
+
+function buildFox() {
+  const g = new THREE.Group();
+  const mat = (c) => new THREE.MeshLambertMaterial({color:c});
+  const m = (geo, c) => {
+    const me = new THREE.Mesh(geo, mat(c));
+    me.castShadow = true;
+    return me;
+  };
+
+  // Cuerpo principal (alargado, horizontal)
+  const body = m(new THREE.SphereGeometry(.22, 10, 8), FOX_C.body);
+  body.scale.set(1, .85, 1.7);
+  body.position.set(0, .32, 0);
+  g.add(body);
+
+  // Vientre claro
+  const belly = m(new THREE.SphereGeometry(.21, 10, 8), FOX_C.belly);
+  belly.scale.set(.85, .55, 1.5);
+  belly.position.set(0, .22, 0);
+  g.add(belly);
+
+  // Cuello
+  const neck = m(new THREE.CylinderGeometry(.13, .15, .14, 8), FOX_C.body);
+  neck.position.set(0, .42, .32);
+  neck.rotation.x = -.4;
+  g.add(neck);
+
+  // Cabeza (cono ancho hacia adelante - hocico)
+  const head = m(new THREE.SphereGeometry(.16, 10, 8), FOX_C.body);
+  head.scale.set(1, .9, 1.15);
+  head.position.set(0, .48, .42);
+  g.add(head);
+
+  // Hocico puntiagudo
+  const snout = m(new THREE.ConeGeometry(.07, .18, 7), FOX_C.body);
+  snout.position.set(0, .43, .58);
+  snout.rotation.x = Math.PI/2;
+  g.add(snout);
+
+  // Nariz negra
+  const nose = m(new THREE.SphereGeometry(.025, 6, 5), FOX_C.tailTip);
+  nose.position.set(0, .43, .67);
+  g.add(nose);
+
+  // Orejas triangulares puntiagudas
+  function ear(side) {
+    const e = m(new THREE.ConeGeometry(.06, .15, 5), FOX_C.body);
+    e.position.set(side * .08, .62, .38);
+    e.rotation.z = side * .15;
+    g.add(e);
+    // interior oreja
+    const inner = m(new THREE.ConeGeometry(.04, .1, 5), FOX_C.ear);
+    inner.position.set(side * .08, .6, .39);
+    inner.rotation.z = side * .15;
+    g.add(inner);
+  }
+  ear(-1); ear(1);
+
+  // Ojos
+  function eye(side) {
+    const e = m(new THREE.SphereGeometry(.022, 6, 5), FOX_C.eye);
+    e.position.set(side * .065, .51, .53);
+    g.add(e);
+  }
+  eye(-1); eye(1);
+
+  // Patas (4) - cilindros oscuros
+  const legPositions = [
+    [-.12, .15, .18],   // delantera izq
+    [ .12, .15, .18],   // delantera der
+    [-.12, .15, -.18],  // trasera izq
+    [ .12, .15, -.18],  // trasera der
+  ];
+  const legs = [];
+  for (const [x, y, z] of legPositions) {
+    const leg = m(new THREE.CylinderGeometry(.04, .05, .26, 6), FOX_C.legs);
+    leg.position.set(x, y, z);
+    g.add(leg);
+    legs.push(leg);
+  }
+
+  // Cola larga y peluda (cilindro + esfera al final)
+  const tailBase = m(new THREE.CylinderGeometry(.08, .05, .3, 7), FOX_C.body);
+  tailBase.position.set(0, .42, -.32);
+  tailBase.rotation.x = .5;
+  g.add(tailBase);
+
+  const tailMid = m(new THREE.SphereGeometry(.09, 8, 6), FOX_C.body);
+  tailMid.position.set(0, .55, -.45);
+  tailMid.scale.set(1, 1, 1.3);
+  g.add(tailMid);
+
+  // Punta blanca/negra de la cola
+  const tailEnd = m(new THREE.SphereGeometry(.08, 7, 5), FOX_C.tailTip);
+  tailEnd.position.set(0, .65, -.55);
+  tailEnd.scale.set(1, .9, 1.2);
+  g.add(tailEnd);
+
+  // Disco de sombra propio
+  const shadow = new THREE.Mesh(
+    new THREE.CircleGeometry(.4, 14),
+    new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.25})
+  );
+  shadow.rotation.x = -Math.PI/2;
+  shadow.position.y = .01;
+  g.add(shadow);
+
+  // Guardar referencias para animación
+  g.userData.parts = { legs, tailBase, tailMid, tailEnd, head, body };
+  return g;
+}
+
+// Estado del zorro (su "AI" simple)
+const fox = buildFox();
+fox.visible = false;  // se muestra al iniciar el juego
+scene.add(fox);
+
+const foxState = {
+  // Posición inicial (se asignará al iniciar el juego)
+  x: 10, z: 10, rot: 0,
+  // Estado actual del comportamiento
+  mode: 'wander',          // 'wander' | 'pause' | 'flee'
+  modeTimer: 0,            // tiempo restante en el modo actual
+  // Destino de wandering
+  targetX: 10, targetZ: 10,
+  // Velocidades
+  walkSpeed: 1.2,
+  fleeSpeed: 4.5,
+  // Animación
+  walkCycle: 0,
+  // Detección
+  flightDistance: 5.5,     // distancia a la que huye del jugador
+  safeDistance: 12,        // distancia a la que vuelve a calmarse
+};
+
+function placeFox() {
+  // Posición aleatoria evitando árboles, vertiente y centro del mapa
+  let tries = 0;
+  while (tries++ < 200) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 8 + Math.random() * (BOUND - 12);
+    const x = Math.cos(a) * r;
+    const z = Math.sin(a) * r;
+    if (x*x + z*z < 64) continue;  // lejos del jugador inicial
+    let ok = true;
+    for (const tp of treePos) {
+      if (Math.hypot(x - tp.x, z - tp.y) < 2) { ok = false; break; }
+    }
+    if (!ok) continue;
+    // Lejos de la vertiente
+    if (pondGroup.position.lengthSq() > 0) {
+      const dx = x - pondGroup.position.x, dz = z - pondGroup.position.z;
+      if (dx*dx + dz*dz < 36) continue;
+    }
+    foxState.x = x; foxState.z = z;
+    foxState.targetX = x; foxState.targetZ = z;
+    foxState.mode = 'wander';
+    foxState.modeTimer = 1 + Math.random() * 2;
+    return;
+  }
+  foxState.x = 15; foxState.z = 15;
+}
+
+function pickFoxWanderTarget() {
+  // Elige un punto cercano (3-7u) en una dirección aleatoria
+  const a = Math.random() * Math.PI * 2;
+  const r = 3 + Math.random() * 4;
+  let nx = foxState.x + Math.cos(a) * r;
+  let nz = foxState.z + Math.sin(a) * r;
+  // Mantener dentro de límites
+  nx = Math.max(-BOUND + 2, Math.min(BOUND - 2, nx));
+  nz = Math.max(-BOUND + 2, Math.min(BOUND - 2, nz));
+  foxState.targetX = nx;
+  foxState.targetZ = nz;
+}
+
+function updateFox(dt, playerPos) {
+  const dx = foxState.x - playerPos.x;
+  const dz = foxState.z - playerPos.z;
+  const distToPlayer = Math.sqrt(dx*dx + dz*dz);
+
+  // Decidir modo
+  if (distToPlayer < foxState.flightDistance) {
+    // Huir del jugador
+    foxState.mode = 'flee';
+    // Apuntar lejos del jugador
+    foxState.targetX = foxState.x + dx * 8 / Math.max(.1, distToPlayer);
+    foxState.targetZ = foxState.z + dz * 8 / Math.max(.1, distToPlayer);
+    foxState.targetX = Math.max(-BOUND+2, Math.min(BOUND-2, foxState.targetX));
+    foxState.targetZ = Math.max(-BOUND+2, Math.min(BOUND-2, foxState.targetZ));
+  } else if (foxState.mode === 'flee' && distToPlayer > foxState.safeDistance) {
+    // Calmarse — pasar a pausa
+    foxState.mode = 'pause';
+    foxState.modeTimer = 1.5 + Math.random() * 2;
+  }
+
+  // Actualizar timer de modo
+  foxState.modeTimer -= dt;
+  if (foxState.modeTimer <= 0 && foxState.mode !== 'flee') {
+    // Cambiar de modo: wander <-> pause
+    if (foxState.mode === 'wander') {
+      foxState.mode = 'pause';
+      foxState.modeTimer = 1.5 + Math.random() * 2.5;  // 1.5-4s pausa
+    } else {
+      foxState.mode = 'wander';
+      foxState.modeTimer = 3 + Math.random() * 4;       // 3-7s caminata
+      pickFoxWanderTarget();
+    }
+  }
+
+  // Movimiento
+  let speed = 0;
+  let isMoving = false;
+  if (foxState.mode === 'wander') {
+    speed = foxState.walkSpeed;
+    isMoving = true;
+  } else if (foxState.mode === 'flee') {
+    speed = foxState.fleeSpeed;
+    isMoving = true;
+  }
+
+  if (isMoving) {
+    const tdx = foxState.targetX - foxState.x;
+    const tdz = foxState.targetZ - foxState.z;
+    const tdist = Math.sqrt(tdx*tdx + tdz*tdz);
+    if (tdist < .3 && foxState.mode === 'wander') {
+      // Llegó al destino, pausa
+      foxState.mode = 'pause';
+      foxState.modeTimer = 1 + Math.random() * 2;
+    } else if (tdist > .01) {
+      const nx = foxState.x + (tdx / tdist) * speed * dt;
+      const nz = foxState.z + (tdz / tdist) * speed * dt;
+      // Evitar atravesar árboles
+      let blocked = false;
+      for (const tp of treePos) {
+        if ((nx-tp.x)**2 + (nz-tp.y)**2 < .8) { blocked = true; break; }
+      }
+      if (!blocked) {
+        foxState.x = nx; foxState.z = nz;
+      } else {
+        // Si se choca, elegir nuevo target
+        pickFoxWanderTarget();
+      }
+      // Rotar suavemente hacia el destino
+      const targetRot = Math.atan2(tdx, tdz);
+      let drot = targetRot - foxState.rot;
+      while (drot > Math.PI) drot -= Math.PI*2;
+      while (drot < -Math.PI) drot += Math.PI*2;
+      foxState.rot += drot * Math.min(1, dt * 6);
+    }
+  }
+
+  // Aplicar transformación al mesh
+  fox.position.set(foxState.x, meshGroundY(foxState.x, foxState.z), foxState.z);
+  fox.rotation.y = foxState.rot;
+
+  // Animación de patas
+  const parts = fox.userData.parts;
+  if (isMoving) {
+    foxState.walkCycle += dt * (foxState.mode === 'flee' ? 18 : 9);
+    const sw = Math.sin(foxState.walkCycle);
+    // Patas delanteras y traseras alternan (galope si huye, trote si camina)
+    parts.legs[0].rotation.x =  sw * .5;          // del izq
+    parts.legs[1].rotation.x = -sw * .5;          // del der
+    parts.legs[2].rotation.x = -sw * .5;          // tras izq
+    parts.legs[3].rotation.x =  sw * .5;          // tras der
+    // Pequeño "bote" del cuerpo
+    parts.body.position.y = .32 + Math.abs(Math.sin(foxState.walkCycle*2))*.025;
+    // Cola se mueve
+    parts.tailBase.rotation.z = Math.sin(foxState.walkCycle*1.5) * .15;
+    parts.tailMid.position.x  = Math.sin(foxState.walkCycle*1.5) * .05;
+    parts.tailEnd.position.x  = Math.sin(foxState.walkCycle*1.5) * .08;
+  } else {
+    // Idle: patas se relajan
+    for (const leg of parts.legs) leg.rotation.x *= .85;
+    parts.body.position.y = .32;
+    // Cola se balancea suave
+    parts.tailBase.rotation.z = Math.sin(performance.now()*.001) * .08;
+  }
+
+  // Cabeza ocasionalmente baja (olfateando) durante pause
+  if (foxState.mode === 'pause') {
+    const sniff = Math.sin(performance.now() * .002);
+    parts.head.rotation.x = .15 + sniff * .12;
+  } else {
+    parts.head.rotation.x *= .9;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════════════════════════════
+let started=false, gameOver=false;
+const clock = new THREE.Clock();
+let walkCycle=0, idleCycle=0;
+
+// Estado de juego
+const game = {
+  goal: 3,
+  collected: 0,
+  mission: {},          // { species: count } a recolectar
+  collectedBySpecies: {},// { species: count } recolectados
+  water: 2,             // niveles iniciales
+  waterMax: 2,
+  waterTimer: 0,        // segundos acumulados en el nivel actual
+  // Duración de cada nivel: nivel 2→1 dura 60s, nivel 1→0 dura 30s
+  WATER_INTERVALS: [30, 60],  // INTERVALS[level-1] da el tiempo
+};
+
+// ── Selector de dificultad ──────────────────────────────────────
+let selectedDifficulty = 3;
+const diffBtns = document.querySelectorAll('.diff-btn');
+diffBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    diffBtns.forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedDifficulty = parseInt(btn.dataset.level, 10);
+  });
+});
+
+// Generar mini-render de cada planta para el briefing
+function renderPlantPreview(canvas, key) {
+  const w = canvas.width = 100, h = canvas.height = 100;
+  // Mini scene
+  const r = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+  r.setSize(w, h);
+  r.setClearColor(0x000000, 0);
+  const sc = new THREE.Scene();
+  const cam = new THREE.PerspectiveCamera(40, 1, .1, 10);
+  cam.position.set(1.2, 1.2, 1.8);
+  cam.lookAt(0, .4, 0);
+  // Luces
+  sc.add(new THREE.AmbientLight(0xb0d0c0, .8));
+  const l = new THREE.DirectionalLight(0xffeebb, 1.6);
+  l.position.set(2,3,2); sc.add(l);
+  // Construir planta
+  const builder = plantBuildersByKey[key];
+  // Crear y reposicionar al origen
+  const plantGroup = builder.fn(0, 0);
+  plantGroup.position.set(0, 0, 0);
+  sc.add(plantGroup);
+  // Quitar este interactuable de la lista (es solo preview)
+  interactables.pop();
+  // Render una sola vez (estática)
+  // Pequeña rotación para mejor ángulo
+  plantGroup.rotation.y = Math.PI / 6;
+  r.render(sc, cam);
+}
+
+function showBriefing(){
+  const grid = document.getElementById('mission-grid');
+  grid.innerHTML = '';
+  // Ordenar por cantidad descendente
+  const entries = Object.entries(game.mission).sort((a,b) => b[1]-a[1]);
+  for (const [key, count] of entries) {
+    const builder = plantBuildersByKey[key];
+    const card = document.createElement('div');
+    card.className = 'mission-card';
+    card.innerHTML = `
+      <div class="preview"><canvas></canvas></div>
+      <div class="name">${builder.label}</div>
+      <div class="qty">${count}</div>
+    `;
+    grid.appendChild(card);
+    // Render del preview tras agregarlo al DOM
+    setTimeout(() => renderPlantPreview(card.querySelector('canvas'), key), 0);
+  }
+  document.getElementById('briefing').classList.add('show');
+}
+
+document.getElementById('start-btn').addEventListener('click',()=>{
+  document.getElementById('title-screen').style.display='none';
+  game.goal = selectedDifficulty;
+  game.collected = 0;
+  game.collectedBySpecies = {};
+  game.water = 2;
+  game.waterTimer = 0;
+  // Generar misión aleatoria
+  game.mission = generateMission(game.goal);
+  document.getElementById('goal-total').textContent = game.goal;
+  document.getElementById('goal-current').textContent = '0';
+  updateWaterMeter();
+  // Mostrar briefing antes de comenzar
+  showBriefing();
+});
+
+document.getElementById('briefing-start').addEventListener('click', () => {
+  document.getElementById('briefing').classList.remove('show');
+  // Posición aleatoria de la vertiente
+  const pondPos = placePond();
+  // Sembrar plantas según la misión (con decoys), evitando la vertiente
+  plantWorld(game.mission, pondPos);
+  // Posicionar el zorro en el bosque
+  placeFox();
+  fox.visible = true;
+  started = true; gameOver = false;
+  clock.start();
+  // Mensaje al jugador
+  setTimeout(() => {
+    showNotif(`💧 La vertiente fue localizada en el bosque`);
+  }, 600);
+});
+
+document.getElementById('restart-btn').addEventListener('click', () => {
+  location.reload();
+});
+
+const envEl    = document.getElementById('env-name');
+const cp2      = new THREE.Vector2();
+const redTint  = document.getElementById('red-tint');
+
+// ── Medidor de agua ─────────────────────────────────────────────
+const drops = [document.getElementById('drop-1'), document.getElementById('drop-2')];
+function updateWaterMeter(){
+  drops.forEach((d, i) => {
+    d.classList.toggle('empty', game.water <= i);
+    // Aviso visual cuando solo queda 1
+    d.classList.toggle('warn', game.water === 1 && i === 0);
+  });
+}
+
+// ── Pantalla final ──────────────────────────────────────────────
+function endGame(won){
+  if(gameOver) return;
+  gameOver = true;
+  started = false;
+  const screen = document.getElementById('end-screen');
+  const title  = document.getElementById('end-title');
+  const msg    = document.getElementById('end-msg');
+  if(won){
+    screen.classList.remove('lose');
+    screen.classList.add('show', 'win');
+    title.textContent = '✦ Victoria';
+    msg.innerHTML = `Has recolectado las ${game.goal} plantas del bosque.<br>
+                     La Pachamama está contigo.`;
+  } else {
+    screen.classList.remove('win');
+    screen.classList.add('show', 'lose');
+    title.textContent = 'Sin agua';
+    msg.innerHTML = `Tu cuerpo no puede continuar sin agua.<br>
+                     Llevabas <b>${game.collected}</b> de <b>${game.goal}</b> plantas.`;
+  }
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  if(!started){ renderer.render(scene,camera); return; }
+
+  const dt = Math.min(clock.getDelta(), .05);
+  const t  = clock.elapsedTime;
+  idleCycle = t;
+
+  // ── movimiento ──────────────────────────────────────────────
+  const forward = new THREE.Vector3(-Math.sin(camYaw),0,-Math.cos(camYaw));
+  const right   = new THREE.Vector3( Math.cos(camYaw),0,-Math.sin(camYaw));
+  const move    = new THREE.Vector3();
+
+  if(jActive){ move.addScaledVector(forward,-jDy).addScaledVector(right,jDx); }
+  if(keys['KeyW']) move.addScaledVector(forward,1);
+  if(keys['KeyS']) move.addScaledVector(forward,-1);
+  if(keys['KeyA']) move.addScaledVector(right,-1);
+  if(keys['KeyD']) move.addScaledVector(right,1);
+
+  const run     = keys['ShiftLeft']||keys['ShiftRight'];
+  const jSpeed  = jActive ? Math.sqrt(jDx*jDx+jDy*jDy) : 1;
+  const moving  = move.length() > .01;
+
+  if(moving){
+    const spd = (jActive?jSpeed:1) * (run?6.5:3.2) * dt;
+    move.normalize().multiplyScalar(spd);
+    const np = char.position.clone().add(move);
+    np.x = Math.max(-BOUND, Math.min(BOUND, np.x));
+    np.z = Math.max(-BOUND, Math.min(BOUND, np.z));
+    let blocked=false;
+    for(const tp of treePos){ if((np.x-tp.x)**2+(np.z-tp.y)**2<.5){blocked=true;break;} }
+    if(!blocked){ char.position.x=np.x; char.position.z=np.z; }
+    char.position.y = meshGroundY(char.position.x, char.position.z);
+    char.rotation.y = Math.atan2(move.x, move.z);
+  }
+
+  // ── animación ───────────────────────────────────────────────
+  if(moving){
+    walkCycle += dt * (run ? 9 : 5.5);
+    const sw = Math.sin(walkCycle);
+    const sw2= Math.sin(walkCycle*2);
+
+    // piernas: rotación en X con hip sway leve
+    legL.rotation.x = sw * .55;
+    legR.rotation.x = -sw * .55;
+    legL.rotation.z = sw * .04;
+    legR.rotation.z = -sw * .04;
+
+    // brazos con contramovimiento y balanceo
+    armL.rotation.x = -sw * .42;
+    armR.rotation.x =  sw * .42;
+    armL.rotation.z = -.18 + sw*.06;
+    armR.rotation.z =  .18 - sw*.06;
+
+    // leve bob del torso
+    char.position.y += Math.abs(sw2)*.022;
+
+    // cabeza leve vaivén
+    head.rotation.z = sw * .04;
+
+  } else {
+    // Idle — suavizado + respiración
+    walkCycle *= .85;
+
+    legL.rotation.x *= .82; legR.rotation.x *= .82;
+    legL.rotation.z *= .85; legR.rotation.z *= .85;
+    armL.rotation.x *= .82; armR.rotation.x *= .82;
+    armL.rotation.z += (-.18 - armL.rotation.z)*.12;
+    armR.rotation.z += ( .18 - armR.rotation.z)*.12;
+    head.rotation.z *= .88;
+
+    // respiración: torso y hombros
+    const breath = Math.sin(idleCycle*1.1)*.012;
+    torso.scale.y    = 1 + breath;
+    ponchoOuter.scale.y = 1 + breath*.8;
+
+    // leve movimiento de cabeza idle
+    head.rotation.y = Math.sin(idleCycle*.4)*.04;
+    head.rotation.x = Math.sin(idleCycle*.3)*.02;
+
+    // pompón chullo se balancea
+    pompon.position.y = 2.42 + Math.sin(idleCycle*2.2)*.015;
+  }
+
+  // Parpadeo ocular (aproximado: escala Y del ojo)
+  const blinkT = (t % 4.5);
+  const blink  = blinkT > 4.2 ? 1-Math.abs((blinkT-4.35)/.15) : 1;
+
+  // Sparkle estanque
+  sparkle.material.opacity = .18 + Math.abs(Math.sin(t*1.6))*.22;
+
+  // ── cámara ──────────────────────────────────────────────────
+  camTarget.lerp(char.position.clone().add(new THREE.Vector3(0, 0.95, 0)), .1);
+  camera.position.set(
+    camTarget.x + Math.sin(camYaw)*Math.cos(camPitch)*camDist,
+    camTarget.y + Math.sin(camPitch)*camDist,
+    camTarget.z + Math.cos(camYaw)*Math.cos(camPitch)*camDist
+  );
+  camera.lookAt(camTarget);
+
+  // ── HIGHLIGHT INTRÍNSECO DE INTERACTUABLES ──────────────────
+  cp2.set(char.position.x, char.position.z);
+
+  // Encontrar el más cercano dentro del radio (ignorar recolectados)
+  let closestItem = null, closestDist = Infinity;
+  for(const item of interactables){
+    if(item.collected) continue;
+    const d = cp2.distanceTo(new THREE.Vector2(item.obj.position.x, item.obj.position.z));
+    if(d < item.radius && d < closestDist){ closestDist=d; closestItem=item; }
+  }
+  nearItem = closestItem;
+  interactBtn.classList.toggle('show', !!nearItem);
+
+  const PROXIMITY_NEAR = 5;   // umbral para "cerca" (responde al jugador)
+
+  for(const item of interactables){
+    // Animación de recolección (encogerse y desvanecerse)
+    if(item.collecting){
+      item.collectT += dt * 2.2;
+      const k = Math.min(item.collectT, 1);
+      // shrink + lift
+      const s = (1 - k) * item.collectStartScale;
+      item.obj.scale.setScalar(Math.max(.001, s));
+      item.obj.position.y = item.collectStartY + k * .8;
+      item.obj.rotation.y += dt * 6;
+      // ocultar partes brillantes
+      if(item.glowParts){
+        for(const part of item.glowParts){
+          if(part.material.emissiveIntensity !== undefined){
+            part.material.emissiveIntensity *= .9;
+          }
+        }
+      }
+      if(k >= 1){
+        item.obj.visible = false;
+        item.collecting = false;
+        item.collected = true;
+      }
+      continue;
+    }
+    if(item.collected) continue;
+
+    const ip   = item.obj.position;
+    const dist = char.position.distanceTo(new THREE.Vector3(ip.x, char.position.y, ip.z));
+    const isActive = item === nearItem;
+    const proximity = Math.max(0, 1 - dist / PROXIMITY_NEAR);  // 0..1
+
+    // ── Respiración base (siempre activa, sutil) ──
+    const breathe = 1 + Math.sin(t * 1.4 + ip.x) * .025;
+    // Cuando el jugador se acerca, la planta se anima más
+    const liveScale = breathe * (1 + proximity * .12);
+    item.obj.scale.setScalar(liveScale);
+
+    // ── Partes brillantes (frutos/flores) parpadean ──
+    if(item.glowParts){
+      for(let i = 0; i < item.glowParts.length; i++){
+        const part = item.glowParts[i];
+        if(part.material.emissiveIntensity !== undefined){
+          // Pulso individual con fase distinta
+          const phase = i * .7;
+          const baseEmissive = .35 + Math.sin(t * 1.8 + phase) * .15;
+          const target = baseEmissive + proximity * .8 + (isActive ? .5 : 0);
+          part.material.emissiveIntensity += (target - part.material.emissiveIntensity) * .15;
+        }
+      }
+    }
+
+    // ── Caso especial: agua — gotas orbitan ──
+    if(item.isWater && item.glowParts){
+      for(const drop of item.glowParts){
+        const phase = drop.userData.phase + t * .6;
+        drop.position.set(
+          ip.x + Math.cos(phase) * drop.userData.radius,
+          ip.y + drop.userData.height + Math.sin(t * 2 + drop.userData.phase) * .15,
+          ip.z + Math.sin(phase) * drop.userData.radius
+        );
+      }
+    }
+  }
+
+  // ── Consumo de agua por tiempo ──────────────────────────────
+  // Nivel 2 (lleno): dura 60s antes de bajar a 1
+  // Nivel 1 (advertencia): dura 30s antes de bajar a 0 (muerte)
+  if(game.water > 0){
+    game.waterTimer += dt;
+    const intervalIdx = Math.min(game.water - 1, game.WATER_INTERVALS.length - 1);
+    const interval = game.WATER_INTERVALS[intervalIdx];
+    if(game.waterTimer >= interval){
+      game.waterTimer = 0;
+      game.water = Math.max(0, game.water - 1);
+      updateWaterMeter();
+      if(game.water === 0){
+        endGame(false);
+      } else {
+        showNotif(`💧 Tienes sed…`);
+      }
+    }
+  }
+
+  // ── Tinte rojo progresivo durante el último nivel ───────────
+  // Solo cuando water === 1: el tinte va de 0 a fuerte conforme se agota
+  if(game.water === 1){
+    // 0 al inicio del nivel, ~1 cuando casi muere
+    const interval = game.WATER_INTERVALS[0]; // 30s
+    const progress = Math.min(1, game.waterTimer / interval);
+    // Gradiente: empieza tenue desde los bordes, termina cubriendo todo en rojo intenso
+    const edgeAlpha   = 0.15 + progress * 0.55;   // bordes
+    const centerAlpha = progress * 0.55;          // centro
+    const fullAlpha   = 0.4 + progress * 0.5;     // borde más externo
+    redTint.style.background = `radial-gradient(ellipse at center,
+      rgba(255,30,30,${centerAlpha.toFixed(3)}) 0%,
+      rgba(200,15,15,${edgeAlpha.toFixed(3)}) 50%,
+      rgba(140,0,0,${fullAlpha.toFixed(3)}) 100%)`;
+    redTint.style.opacity = '1';
+    // Latido cuando ya queda poco (~últimos 8 segundos)
+    if(progress > 0.73){
+      redTint.classList.add('dying');
+    } else {
+      redTint.classList.remove('dying');
+    }
+  } else if(game.water >= 2){
+    // Limpio
+    redTint.style.opacity = '0';
+    redTint.classList.remove('dying');
+  } else if(game.water === 0){
+    // Muerte: rojo total
+    redTint.style.background = `radial-gradient(ellipse at center,
+      rgba(255,40,40,0.7) 0%,
+      rgba(180,0,0,0.85) 100%)`;
+    redTint.style.opacity = '1';
+    redTint.classList.remove('dying');
+  }
+
+  // ── HUD ─────────────────────────────────────────────────────
+  const pd = char.position.distanceTo(pondGroup.position);
+  const d0 = Math.sqrt(char.position.x**2+char.position.z**2);
+  envEl.textContent = pd<6?'Orilla de Vertiente':d0<6?'Claro del Bosque':d0<20?'Sotobosque':'Bosque Profundo';
+
+  // ── FAUNA ──────────────────────────────────────────────────
+  if(started && !gameOver) updateFox(dt, char.position);
+
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+</script>
+
+</body>
+</html>
