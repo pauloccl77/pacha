@@ -336,7 +336,7 @@ text-align:center; margin-top:1em; font-style:italic;
 
 <!-- Tag de versión (esquina inferior izquierda) -->
 
-<div id="version-tag">v0.2.2</div>
+<div id="version-tag">v0.2.3</div>
 
 <!-- Pantalla final -->
 
@@ -397,9 +397,9 @@ const sun = new THREE.DirectionalLight(0xffecb0, 2.2);
 sun.position.set(25, 55, 15);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = sun.shadow.camera.bottom = -70;
-sun.shadow.camera.right = sun.shadow.camera.top = 70;
-sun.shadow.camera.far = 200;
+sun.shadow.camera.left = sun.shadow.camera.bottom = -100;
+sun.shadow.camera.right = sun.shadow.camera.top = 100;
+sun.shadow.camera.far = 250;
 sun.shadow.bias = -0.0008;
 scene.add(sun);
 
@@ -415,7 +415,7 @@ scene.add(groundBounce);
 // ══════════════════════════════════════════════════════════════════
 //  TERRAIN
 // ══════════════════════════════════════════════════════════════════
-const WORLD = 78, BOUND = 35;
+const WORLD = 117, BOUND = 53;
 
 function hAt(x, z) {
   const d = Math.sqrt(x*x + z*z);
@@ -423,7 +423,7 @@ function hAt(x, z) {
        * (1 - Math.min(d/(WORLD*.6), 1));
 }
 
-const groundGeo = new THREE.PlaneGeometry(WORLD, WORLD, 90, 90);
+const groundGeo = new THREE.PlaneGeometry(WORLD, WORLD, 135, 135);
 groundGeo.rotateX(-Math.PI/2);
 const gPos = groundGeo.attributes.position;
 for (let i = 0; i < gPos.count; i++) {
@@ -441,7 +441,7 @@ scene.add(ground);
 
 // Snap exacto al mesh: interpolación bilineal sobre el grid de vértices.
 // El plano va de -WORLD/2..+WORLD/2 con (SEGS+1)x(SEGS+1) vértices.
-const SEGS = 90;
+const SEGS = 135;
 const STEP = WORLD / SEGS;          // distancia entre vértices
 const HALF = WORLD / 2;
 // Cachear las alturas de cada vértice en una matriz lineal (rápido)
@@ -540,7 +540,7 @@ function addTree(x, z, type) {
   treePos.push(new THREE.Vector2(x, z));
 }
 
-for (let i = 0; i < 150; i++) {
+for (let i = 0; i < 340; i++) {
   const a = Math.random()*Math.PI*2;
   const d = 4.5 + Math.random()*(BOUND-4.5);
   const x = Math.cos(a)*d, z = Math.sin(a)*d;
@@ -549,7 +549,7 @@ for (let i = 0; i < 150; i++) {
 }
 
 // Rocas
-for (let i = 0; i < 36; i++) {
+for (let i = 0; i < 80; i++) {
   const a = Math.random()*Math.PI*2, d = 3+Math.random()*(BOUND-3);
   const x = Math.cos(a)*d, z = Math.sin(a)*d, s = .2+Math.random()*.6;
   const rock = new THREE.Mesh(
@@ -563,7 +563,7 @@ for (let i = 0; i < 36; i++) {
 }
 
 // Pasto
-for (let i = 0; i < 360; i++) {
+for (let i = 0; i < 800; i++) {
   const a = Math.random()*Math.PI*2, d = Math.random()*BOUND;
   const x = Math.cos(a)*d, z = Math.sin(a)*d;
   const h2 = .3+Math.random()*.5;
