@@ -455,7 +455,7 @@
 <div id="red-tint"></div>
 
 <!-- Tag de versión (esquina inferior izquierda) -->
-<div id="version-tag">v0.3.1</div>
+<div id="version-tag">v0.3.2</div>
 
 <!-- Pantalla final -->
 <div id="end-screen">
@@ -744,7 +744,11 @@ rim.position.y = .04;
 pondGroup.add(rim);
 
 // Posiciona la vertiente en una ubicación aleatoria respetando límites y árboles
-function placePond() {
+function placePond(forced) {
+  if (forced) {
+    pondGroup.position.set(forced.x, hAt(forced.x, forced.z), forced.z);
+    return { x: forced.x, z: forced.z };
+  }
   let tries = 0;
   while (tries++ < 400) {
     const a = Math.random() * Math.PI * 2;
@@ -1152,33 +1156,50 @@ function generatePlantPositions(n, pondPos) {
 }
 
 // Siembra el bosque: plantas de la misión + ~35% extra como ruido
-function plantWorld(mission, pondPos) {
-  // 1) Lista de "exigidas" expandida (cada elemento = una planta a colocar)
-  const required = [];
-  for (const [key, count] of Object.entries(mission)) {
-    for (let i = 0; i < count; i++) required.push(key);
+function plantWorld(mission, pondPos, preComputedLayout) {
+  let allKeys, positions;
+
+  if (preComputedLayout) {
+    // Modo guest: usar el layout que envió el host
+    allKeys = preComputedLayout.plants.map(p => p.species);
+    positions = preComputedLayout.plants.map(p => ({ x: p.x, z: p.z }));
+  } else {
+    // Modo solo o host: generar
+    const required = [];
+    for (const [key, count] of Object.entries(mission)) {
+      for (let i = 0; i < count; i++) required.push(key);
+    }
+    const decoyCount = Math.max(1, Math.round(required.length * 0.35 / 0.65));
+    const decoys = [];
+    for (let i = 0; i < decoyCount; i++) {
+      const builder = plantBuilders[Math.floor(Math.random() * plantBuilders.length)];
+      decoys.push(builder.key);
+    }
+    allKeys = required.concat(decoys);
+    // Mezclar
+    for (let i = allKeys.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [allKeys[i], allKeys[j]] = [allKeys[j], allKeys[i]];
+    }
+    positions = generatePlantPositions(allKeys.length, pondPos);
+    // Si somos host en modo multi, guardar el layout para enviarlo
+    if (net.role === 'host') {
+      worldLayoutCache = {
+        pond: { x: pondPos.x, z: pondPos.z },
+        plants: positions.slice(0, allKeys.length).map((p, i) => ({
+          species: allKeys[i], x: p.x, z: p.z
+        })),
+      };
+    }
   }
-  // 2) Calcular cantidad de ruido (35% del total mostrado en el mundo)
-  const decoyCount = Math.max(1, Math.round(required.length * 0.35 / 0.65));
-  const decoys = [];
-  for (let i = 0; i < decoyCount; i++) {
-    const builder = plantBuilders[Math.floor(Math.random() * plantBuilders.length)];
-    decoys.push(builder.key);
-  }
-  const allKeys = required.concat(decoys);
-  // 3) Mezclar
-  for (let i = allKeys.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [allKeys[i], allKeys[j]] = [allKeys[j], allKeys[i]];
-  }
-  // 4) Sembrar en posiciones aleatorias por todo el mundo
-  const positions = generatePlantPositions(allKeys.length, pondPos);
+
+  // Sembrar
   for (let i = 0; i < positions.length; i++) {
     const key = allKeys[i];
     const builder = plantBuildersByKey[key];
-    scene.add(builder.fn(positions[i].x, positions[i].z));
+    if (builder) scene.add(builder.fn(positions[i].x, positions[i].z));
   }
-  // 5) Marcar como decoy las plantas que exceden la cuota
+  // Marcar decoys
   const remainingQuota = { ...mission };
   for (const item of interactables) {
     if (item.type === 'agua') continue;
@@ -1190,6 +1211,8 @@ function plantWorld(mission, pondPos) {
     }
   }
 }
+
+let worldLayoutCache = null;
 
 // ─── VERTIENTE — gotas orbitando (sin halo) ──────────────────────────────
 const waterDrops = [];
@@ -2128,6 +2151,16 @@ function handleServerMsg(msg) {
       startGame();
       break;
 
+    case 'world_layout':
+      // Recibimos el layout del mundo del host
+      pendingWorldLayout = msg.layout;
+      // Si ya estamos esperando para sembrar, hacerlo ahora
+      if (waitingForLayout) {
+        waitingForLayout = false;
+        seedWorld();
+      }
+      break;
+
     case 'peer_pose':
       // Actualizar posición del jugador remoto
       peerState.targetX   = msg.x;
@@ -2368,19 +2401,45 @@ function startGame() {
 }
 
 // ── Briefing start ────────────────────────────────────────────────
-document.getElementById('briefing-start').addEventListener('click', () => {
-  document.getElementById('briefing').classList.remove('show');
-  // En modo multi usar el rng seeded para posiciones deterministas
-  const savedRandom = Math.random;
-  if (!net.isSolo && net.seed !== null) Math.random = rng;
-  const pondPos = placePond();
-  plantWorld(game.mission, pondPos);
+// Layout pendiente: el guest espera el del host antes de sembrar
+let pendingWorldLayout = null;
+let waitingForLayout = false;
+
+function seedWorld() {
+  if (net.role === 'guest' && pendingWorldLayout) {
+    // Guest: usar el layout que envió el host
+    placePond(pendingWorldLayout.pond);
+    plantWorld(game.mission, pondPosFromLayout(), pendingWorldLayout);
+  } else {
+    // Solo o host: generar normalmente
+    const pondPos = placePond();
+    plantWorld(game.mission, pondPos);
+    // Si somos host, enviar el layout al guest
+    if (net.role === 'host' && worldLayoutCache) {
+      sendNet('world_layout', { layout: worldLayoutCache });
+    }
+  }
   placeFox();
   fox.visible = true;
-  if (!net.isSolo && net.seed !== null) Math.random = savedRandom;
   started = true; gameOver = false;
   clock.start();
   setTimeout(() => showNotif('💧 La vertiente fue localizada en el bosque'), 600);
+}
+
+function pondPosFromLayout() {
+  return { x: pendingWorldLayout.pond.x, z: pendingWorldLayout.pond.z };
+}
+
+document.getElementById('briefing-start').addEventListener('click', () => {
+  document.getElementById('briefing').classList.remove('show');
+  if (net.role === 'guest' && !pendingWorldLayout) {
+    // Esperar el layout del host
+    waitingForLayout = true;
+    showNotif('Esperando al anfitrión…');
+    sendNet('request_world_layout');
+  } else {
+    seedWorld();
+  }
 });
 
 document.getElementById('restart-btn').addEventListener('click', () => location.reload());
