@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -14,255 +13,334 @@
   body { background:#060e06; overflow:hidden; font-family:'Georgia',serif; touch-action:none; }
   canvas { display:block; width:100vw; height:100vh; }
 
-#title-screen {
-position:fixed; inset:0;
-background:radial-gradient(ellipse at 50% 60%, #0d2010 0%, #040a04 100%);
-display:flex; flex-direction:column; align-items:center; justify-content:center;
-z-index:100;
-padding:1.2em 1em;
-overflow-y:auto;
-}
-#title-screen h1 {
-font-size:clamp(2rem,9vw,6.5rem); letter-spacing:.18em;
-color:#e8c96a; text-shadow:0 0 80px rgba(232,201,106,.5), 0 2px 0 rgba(0,0,0,.8);
-font-weight:normal; margin-bottom:.1em;
-}
-.subtitle { color:#7aaa6a; font-size:clamp(.6rem,2.5vw,.9rem); letter-spacing:.35em; text-transform:uppercase; margin-bottom:1.5em; opacity:.75; }
-.ornament { width:110px; height:1px; background:linear-gradient(90deg,transparent,#e8c96a,transparent); margin:.6em auto; }
-#start-btn {
-background:transparent; border:1.5px solid rgba(232,201,106,.7); color:#e8c96a;
-padding:.8em 2.4em; font-size:.9rem; letter-spacing:.3em; text-transform:uppercase;
-cursor:pointer; font-family:‘Georgia’,serif; border-radius:2px;
-transition: all .3s; margin-top:.6em;
-}
-#start-btn:active { background:rgba(232,201,106,.1); }
+  #title-screen {
+    position:fixed; inset:0;
+    background:radial-gradient(ellipse at 50% 60%, #0d2010 0%, #040a04 100%);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    z-index:100;
+    padding:1.2em 1em;
+    overflow-y:auto;
+  }
+  #title-screen h1 {
+    font-size:clamp(2rem,9vw,6.5rem); letter-spacing:.18em;
+    color:#e8c96a; text-shadow:0 0 80px rgba(232,201,106,.5), 0 2px 0 rgba(0,0,0,.8);
+    font-weight:normal; margin-bottom:.1em;
+  }
+  .subtitle { color:#7aaa6a; font-size:clamp(.6rem,2.5vw,.9rem); letter-spacing:.35em; text-transform:uppercase; margin-bottom:1.5em; opacity:.75; }
+  .ornament { width:110px; height:1px; background:linear-gradient(90deg,transparent,#e8c96a,transparent); margin:.6em auto; }
+  #start-btn {
+    background:transparent; border:1.5px solid rgba(232,201,106,.7); color:#e8c96a;
+    padding:.8em 2.4em; font-size:.9rem; letter-spacing:.3em; text-transform:uppercase;
+    cursor:pointer; font-family:'Georgia',serif; border-radius:2px;
+    transition: all .3s; margin-top:.6em;
+  }
+  #start-btn:active { background:rgba(232,201,106,.1); }
 
-#hud {
-position:fixed; top:16px; left:16px; color:#d0eabc;
-font-size:.68rem; letter-spacing:.12em; line-height:2.1;
-text-shadow:0 1px 6px rgba(0,0,0,.9);
-}
-#biome-label {
-position:fixed; top:16px; right:16px; color:rgba(232,201,106,.65);
-font-size:.6rem; letter-spacing:.28em; text-transform:uppercase; text-align:right;
-text-shadow:0 1px 6px rgba(0,0,0,.9);
-}
+  #hud {
+    position:fixed; top:16px; left:16px; color:#d0eabc;
+    font-size:.68rem; letter-spacing:.12em; line-height:2.1;
+    text-shadow:0 1px 6px rgba(0,0,0,.9);
+  }
+  #biome-label {
+    position:fixed; top:16px; right:16px; color:rgba(232,201,106,.65);
+    font-size:.6rem; letter-spacing:.28em; text-transform:uppercase; text-align:right;
+    text-shadow:0 1px 6px rgba(0,0,0,.9);
+  }
 
-#interact-btn {
-position:fixed; right:24px; bottom:140px;
-width:68px; height:68px; border-radius:50%;
-background:rgba(232,201,106,.12); border:1.5px solid rgba(232,201,106,.65);
-color:#e8c96a; font-size:.65rem; letter-spacing:.06em; display:none;
-align-items:center; justify-content:center; flex-direction:column;
-cursor:pointer; text-align:center; z-index:20;
-box-shadow:0 0 20px rgba(232,201,106,.2);
-}
-#interact-btn.show { display:flex; }
-#interact-btn span { font-size:1.4rem; line-height:1.1; }
+  #interact-btn {
+    position:fixed; right:24px; bottom:140px;
+    width:68px; height:68px; border-radius:50%;
+    background:rgba(232,201,106,.12); border:1.5px solid rgba(232,201,106,.65);
+    color:#e8c96a; font-size:.65rem; letter-spacing:.06em; display:none;
+    align-items:center; justify-content:center; flex-direction:column;
+    cursor:pointer; text-align:center; z-index:20;
+    box-shadow:0 0 20px rgba(232,201,106,.2);
+  }
+  #interact-btn.show { display:flex; }
+  #interact-btn span { font-size:1.4rem; line-height:1.1; }
 
-#joystick-zone {
-position:fixed; left:0; bottom:0; width:50vw; height:48vw; max-height:210px;
-z-index:20; touch-action:none;
-}
-#joystick-base {
-position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-width:108px; height:108px; border-radius:50%;
-background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12);
-}
-#joystick-knob {
-position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-width:44px; height:44px; border-radius:50%;
-background:radial-gradient(circle at 35% 35%, rgba(232,201,106,.6), rgba(232,201,106,.25));
-border:1.5px solid rgba(232,201,106,.8);
-box-shadow:0 0 12px rgba(232,201,106,.3);
-}
-#cam-zone {
-position:fixed; right:0; bottom:0; width:50vw; height:100vh;
-z-index:15; touch-action:none;
-}
-#notif {
-position:fixed; top:38%; left:50%; transform:translateX(-50%);
-color:#e8c96a; font-size:.82rem; letter-spacing:.2em;
-background:rgba(5,15,5,.75); padding:.75em 2em;
-border:1px solid rgba(232,201,106,.35); backdrop-filter:blur(6px);
-opacity:0; transition:opacity .4s; z-index:50; text-align:center;
-pointer-events:none; white-space:nowrap; border-radius:3px;
-}
+  #joystick-zone {
+    position:fixed; left:0; bottom:0; width:50vw; height:48vw; max-height:210px;
+    z-index:20; touch-action:none;
+  }
+  #joystick-base {
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:108px; height:108px; border-radius:50%;
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12);
+  }
+  #joystick-knob {
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:44px; height:44px; border-radius:50%;
+    background:radial-gradient(circle at 35% 35%, rgba(232,201,106,.6), rgba(232,201,106,.25));
+    border:1.5px solid rgba(232,201,106,.8);
+    box-shadow:0 0 12px rgba(232,201,106,.3);
+  }
+  #cam-zone {
+    position:fixed; right:0; bottom:0; width:50vw; height:100vh;
+    z-index:15; touch-action:none;
+  }
+  #notif {
+    position:fixed; top:38%; left:50%; transform:translateX(-50%);
+    color:#e8c96a; font-size:.82rem; letter-spacing:.2em;
+    background:rgba(5,15,5,.75); padding:.75em 2em;
+    border:1px solid rgba(232,201,106,.35); backdrop-filter:blur(6px);
+    opacity:0; transition:opacity .4s; z-index:50; text-align:center;
+    pointer-events:none; white-space:nowrap; border-radius:3px;
+  }
 
-/* VERSIÓN */
-#version-tag {
-position:fixed; bottom:8px; right:10px;
-color:rgba(232,201,106,.55); font-family:monospace;
-font-size:.65rem; letter-spacing:.05em;
-z-index:200; pointer-events:none;
-text-shadow:0 1px 4px rgba(0,0,0,.9);
-}
+  /* VERSIÓN */
+  #version-tag {
+    position:fixed; bottom:8px; right:10px;
+    color:rgba(232,201,106,.55); font-family:monospace;
+    font-size:.65rem; letter-spacing:.05em;
+    z-index:200; pointer-events:none;
+    text-shadow:0 1px 4px rgba(0,0,0,.9);
+  }
 
-/* BOTÓN PANTALLA COMPLETA */
-#fullscreen-btn {
-position:fixed; top:14px; right:14px;
-width:38px; height:38px;
-background:rgba(0,0,0,.35); border:1px solid rgba(232,201,106,.4);
-color:#e8c96a; border-radius:6px;
-display:flex; align-items:center; justify-content:center;
-cursor:pointer; z-index:210;
-backdrop-filter:blur(6px);
-transition:all .25s;
-}
-#fullscreen-btn:active { background:rgba(232,201,106,.18); }
-#fullscreen-btn svg { width:18px; height:18px; display:block; }
-/* Cuando ya está en fullscreen el botón se oculta para no estorbar */
-body.is-fullscreen #fullscreen-btn { opacity:.4; }
+  /* LOBBY MULTIJUGADOR */
+  #lobby-screen {
+    position:fixed; inset:0;
+    background:radial-gradient(ellipse at 50% 60%, #0d2010 0%, #040a04 100%);
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    z-index:101; padding:1.5em 1em; overflow-y:auto;
+  }
+  #lobby-screen.show { display:flex; }
+  #lobby-screen h2 {
+    font-size:clamp(1.4rem,6vw,2.5rem); letter-spacing:.2em;
+    color:#e8c96a; font-weight:normal; margin-bottom:.3em;
+    text-shadow:0 0 40px rgba(232,201,106,.4);
+  }
+  #lobby-screen .lobby-sub {
+    color:#7aaa6a; font-size:.7rem; letter-spacing:.3em;
+    text-transform:uppercase; margin-bottom:2em; opacity:.75;
+  }
+  .lobby-card {
+    background:rgba(20,40,20,.5); border:1px solid rgba(232,201,106,.2);
+    border-radius:6px; padding:1.4em 1.8em; width:100%; max-width:340px;
+    margin-bottom:1em;
+  }
+  .lobby-card h3 {
+    color:#e8c96a; font-size:.8rem; letter-spacing:.25em;
+    text-transform:uppercase; margin-bottom:.8em; font-weight:normal;
+  }
+  .lobby-btn {
+    width:100%; background:rgba(232,201,106,.08);
+    border:1.5px solid rgba(232,201,106,.6); color:#e8c96a;
+    padding:.8em; font-size:.85rem; letter-spacing:.2em;
+    text-transform:uppercase; cursor:pointer;
+    font-family:'Georgia',serif; border-radius:3px;
+    transition:all .25s; margin-top:.5em;
+  }
+  .lobby-btn:active { background:rgba(232,201,106,.2); }
+  .lobby-btn.secondary {
+    border-color:rgba(255,255,255,.2); color:#cde8b0;
+    background:transparent; font-size:.75rem;
+  }
+  .room-code-display {
+    font-size:clamp(1.6rem,8vw,2.2rem); letter-spacing:.3em;
+    color:#ffffff; text-align:center; padding:.5em 0;
+    font-family:monospace; text-shadow:0 0 20px rgba(232,201,106,.4);
+  }
+  .lobby-hint { color:#7aaa6a88; font-size:.65rem; letter-spacing:.15em; margin-top:.5em; text-align:center; }
+  .lobby-input {
+    width:100%; background:rgba(0,0,0,.4);
+    border:1px solid rgba(232,201,106,.4); color:#e8c96a;
+    padding:.7em 1em; font-size:1rem; letter-spacing:.3em;
+    font-family:monospace; border-radius:3px; text-align:center;
+    text-transform:uppercase; outline:none;
+    margin-bottom:.5em;
+  }
+  .lobby-input::placeholder { color:rgba(232,201,106,.3); letter-spacing:.2em; }
+  .lobby-status {
+    color:#7aaa6a; font-size:.72rem; letter-spacing:.15em;
+    text-align:center; margin-top:.8em; min-height:1.5em;
+    transition:color .3s;
+  }
+  .lobby-status.error { color:#c45252; }
+  .lobby-status.ok { color:#7acc7a; }
 
-/* TINTE ROJO DESHIDRATACIÓN */  #red-tint {
-position:fixed; inset:0; z-index:40;
-pointer-events:none;
-background: radial-gradient(ellipse at center,
-rgba(255,0,0,0) 0%,
-rgba(180,20,20,0) 40%,
-rgba(140,0,0,0) 100%);
-mix-blend-mode: multiply;
-opacity:0;
-transition: opacity .3s linear;
-}
-/* Pulso rítmico tipo latido cuando estás cerca de morir */
-@keyframes heartbeat {
-0%, 100% { filter: brightness(1); }
-20%      { filter: brightness(1.25); }
-40%      { filter: brightness(0.95); }
-60%      { filter: brightness(1.15); }
-}
-#red-tint.dying { animation: heartbeat 1.2s ease-in-out infinite; }
+  /* INDICADOR DEL COMPAÑERO EN HUD */
+  #peer-hud {
+    position:fixed; top:16px; left:50%; transform:translateX(-50%);
+    display:none; align-items:center; gap:8px;
+    background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.1);
+    padding:.35em .9em; border-radius:20px;
+    backdrop-filter:blur(6px); z-index:25;
+    font-size:.65rem; letter-spacing:.12em; color:#cde8b0;
+  }
+  #peer-hud.show { display:flex; }
+  #peer-hud .peer-name { color:#e8c96a; }
+  #peer-hud .peer-drops { display:flex; gap:3px; }
+  #peer-hud .peer-drop {
+    width:10px; height:13px;
+    background:rgba(53,128,160,.8); border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+    transition:opacity .3s;
+  }
+  #peer-hud .peer-drop.empty { opacity:.2; }
+  #peer-hud .peer-dead { color:#c45252; font-size:.6rem; }
+  #fullscreen-btn {
+    position:fixed; top:14px; right:14px;
+    width:38px; height:38px;
+    background:rgba(0,0,0,.35); border:1px solid rgba(232,201,106,.4);
+    color:#e8c96a; border-radius:6px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; z-index:210;
+    backdrop-filter:blur(6px);
+    transition:all .25s;
+  }
+  #fullscreen-btn:active { background:rgba(232,201,106,.18); }
+  #fullscreen-btn svg { width:18px; height:18px; display:block; }
+  /* Cuando ya está en fullscreen el botón se oculta para no estorbar */
+  body.is-fullscreen #fullscreen-btn { opacity:.4; }
 
-/* MEDIDOR DE AGUA */
-#water-meter {
-position:fixed; top:16px; left:50%; transform:translateX(-50%);
-display:flex; gap:6px; z-index:25;
-}
-.drop {
-width:28px; height:36px;
-position:relative;
-filter: drop-shadow(0 0 6px rgba(0,0,0,.6));
-}
-.drop svg { width:100%; height:100%; display:block; }
-.drop .fill { transition: opacity .4s, transform .4s; transform-origin: center bottom; }
-.drop.empty .fill { opacity:.15; transform: scale(.6); }
-.drop.warn .fill { animation: pulse-warn 1s ease-in-out infinite; }
-@keyframes pulse-warn { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+  /* TINTE ROJO DESHIDRATACIÓN */  #red-tint {
+    position:fixed; inset:0; z-index:40;
+    pointer-events:none;
+    background: radial-gradient(ellipse at center,
+      rgba(255,0,0,0) 0%,
+      rgba(180,20,20,0) 40%,
+      rgba(140,0,0,0) 100%);
+    mix-blend-mode: multiply;
+    opacity:0;
+    transition: opacity .3s linear;
+  }
+  /* Pulso rítmico tipo latido cuando estás cerca de morir */
+  @keyframes heartbeat {
+    0%, 100% { filter: brightness(1); }
+    20%      { filter: brightness(1.25); }
+    40%      { filter: brightness(0.95); }
+    60%      { filter: brightness(1.15); }
+  }
+  #red-tint.dying { animation: heartbeat 1.2s ease-in-out infinite; }
 
-/* OBJETIVO HUD */
-#goal-hud {
-position:fixed; top:60px; left:50%; transform:translateX(-50%);
-color:#e8c96a; font-size:.7rem; letter-spacing:.2em;
-text-shadow:0 1px 6px rgba(0,0,0,.95); text-align:center;
-line-height:1.6;
-}
-#goal-hud .progress { color:#cde8b0; font-size:.85rem; letter-spacing:.15em; }
+  /* MEDIDOR DE AGUA */
+  #water-meter {
+    position:fixed; top:16px; left:50%; transform:translateX(-50%);
+    display:flex; gap:6px; z-index:25;
+  }
+  .drop {
+    width:28px; height:36px;
+    position:relative;
+    filter: drop-shadow(0 0 6px rgba(0,0,0,.6));
+  }
+  .drop svg { width:100%; height:100%; display:block; }
+  .drop .fill { transition: opacity .4s, transform .4s; transform-origin: center bottom; }
+  .drop.empty .fill { opacity:.15; transform: scale(.6); }
+  .drop.warn .fill { animation: pulse-warn 1s ease-in-out infinite; }
+  @keyframes pulse-warn { 0%,100%{opacity:1;} 50%{opacity:.4;} }
 
-/* DIFICULTAD */
-.difficulty-row {
-display:flex; gap:10px; margin-bottom:1em;
-flex-direction:column; align-items:center;
-}
-.diff-btn {
-background:transparent; border:1px solid rgba(232,201,106,.35); color:#cde8b0;
-padding:.55em 1.8em; font-size:.78rem; letter-spacing:.22em; text-transform:uppercase;
-cursor:pointer; font-family:‘Georgia’,serif; border-radius:2px;
-transition: all .3s; min-width:220px;
-}
-.diff-btn .meta { display:block; font-size:.58rem; opacity:.7; letter-spacing:.15em; margin-top:.25em; color:#7aaa6a; }
-.diff-btn.selected { border-color:#e8c96a; background:rgba(232,201,106,.1); color:#e8c96a; }
-.diff-btn:active { background:rgba(232,201,106,.15); }
+  /* OBJETIVO HUD */
+  #goal-hud {
+    position:fixed; top:60px; left:50%; transform:translateX(-50%);
+    color:#e8c96a; font-size:.7rem; letter-spacing:.2em;
+    text-shadow:0 1px 6px rgba(0,0,0,.95); text-align:center;
+    line-height:1.6;
+  }
+  #goal-hud .progress { color:#cde8b0; font-size:.85rem; letter-spacing:.15em; }
 
-/* En pantalla horizontal compacta: distribuir difficulty en fila para ahorrar alto */
-@media (orientation: landscape) and (max-height: 500px) {
-.difficulty-row { flex-direction:row; gap:8px; }
-.diff-btn { min-width:140px; padding:.5em 1em; font-size:.72rem; }
-#title-screen h1 { font-size:clamp(1.6rem,6vh,3rem); margin-bottom:0; }
-.subtitle { margin-bottom:.6em; }
-.ornament { margin:.3em auto; }
-}
+  /* DIFICULTAD */
+  .difficulty-row {
+    display:flex; gap:10px; margin-bottom:1em;
+    flex-direction:column; align-items:center;
+  }
+  .diff-btn {
+    background:transparent; border:1px solid rgba(232,201,106,.35); color:#cde8b0;
+    padding:.55em 1.8em; font-size:.78rem; letter-spacing:.22em; text-transform:uppercase;
+    cursor:pointer; font-family:'Georgia',serif; border-radius:2px;
+    transition: all .3s; min-width:220px;
+  }
+  .diff-btn .meta { display:block; font-size:.58rem; opacity:.7; letter-spacing:.15em; margin-top:.25em; color:#7aaa6a; }
+  .diff-btn.selected { border-color:#e8c96a; background:rgba(232,201,106,.1); color:#e8c96a; }
+  .diff-btn:active { background:rgba(232,201,106,.15); }
 
-/* PANTALLA FINAL */
-#end-screen {
-position:fixed; inset:0; z-index:150; display:none;
-flex-direction:column; align-items:center; justify-content:center;
-background:radial-gradient(ellipse at 50% 50%, rgba(8,16,8,.92), rgba(0,0,0,.96));
-backdrop-filter:blur(8px);
-}
-#end-screen.show { display:flex; }
-#end-screen.win h2 { color:#e8c96a; }
-#end-screen.lose h2 { color:#c45252; }
-#end-screen h2 {
-font-size:clamp(2rem,9vw,4rem); letter-spacing:.2em;
-font-weight:normal; margin-bottom:.2em;
-text-shadow:0 0 50px currentColor;
-}
-#end-screen .end-msg {
-color:#cde8b0; font-size:.85rem; letter-spacing:.2em;
-margin:1em 0 2.5em; text-align:center; line-height:1.8;
-}
-#end-screen button {
-background:transparent; border:1.5px solid rgba(232,201,106,.7); color:#e8c96a;
-padding:.9em 2.5em; font-size:.9rem; letter-spacing:.3em; text-transform:uppercase;
-cursor:pointer; font-family:‘Georgia’,serif; border-radius:2px;
-}
+  /* En pantalla horizontal compacta: distribuir difficulty en fila para ahorrar alto */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .difficulty-row { flex-direction:row; gap:8px; }
+    .diff-btn { min-width:140px; padding:.5em 1em; font-size:.72rem; }
+    #title-screen h1 { font-size:clamp(1.6rem,6vh,3rem); margin-bottom:0; }
+    .subtitle { margin-bottom:.6em; }
+    .ornament { margin:.3em auto; }
+  }
 
-/* BRIEFING SCREEN */
-#briefing {
-position:fixed; inset:0; z-index:120; display:none;
-flex-direction:column; align-items:center; justify-content:center;
-background:radial-gradient(ellipse at 50% 55%,#0d2210 0%,#030803 100%);
-padding:1.5em; overflow-y:auto;
-}
-#briefing.show { display:flex; }
-#briefing h2 {
-font-size:clamp(1.4rem,5vw,2.2rem); letter-spacing:.25em;
-color:#e8c96a; font-weight:normal; margin-bottom:.4em;
-text-shadow:0 0 30px rgba(232,201,106,.4);
-}
-#briefing .intro {
-color:#7aaa6a; font-size:.7rem; letter-spacing:.3em;
-text-transform:uppercase; margin-bottom:2em; text-align:center;
-}
-.mission-grid {
-display:flex; flex-wrap:wrap; gap:14px; justify-content:center;
-max-width:520px; margin-bottom:2em;
-}
-.mission-card {
-width:130px; padding:14px 10px; border-radius:6px;
-background:rgba(20,40,20,.4); border:1px solid rgba(232,201,106,.18);
-text-align:center;
-}
-.mission-card .preview {
-width:100px; height:100px; margin:0 auto .5em;
-border-radius:4px; background:rgba(0,0,0,.3);
-display:flex; align-items:center; justify-content:center;
-}
-.mission-card canvas { width:100%; height:100%; display:block; border-radius:4px; }
-.mission-card .name {
-color:#e8c96a; font-size:.75rem; letter-spacing:.1em;
-margin-bottom:.3em; line-height:1.3; min-height:2em;
-}
-.mission-card .qty {
-color:#cde8b0; font-size:1.4rem; letter-spacing:.05em;
-font-weight:bold;
-}
-.mission-card .qty::before { content:‘×’; opacity:.6; margin-right:.2em; font-size:1rem; }
-#briefing button {
-background:transparent; border:1.5px solid rgba(232,201,106,.75);
-color:#e8c96a; padding:.9em 2.8em; font-size:.9rem;
-letter-spacing:.3em; text-transform:uppercase;
-cursor:pointer; font-family:‘Georgia’,serif; border-radius:2px;
-transition:all .3s;
-}
-#briefing button:active { background:rgba(232,201,106,.12); }
-#briefing .hint {
-color:#7aaa6a99; font-size:.6rem; letter-spacing:.2em;
-text-align:center; margin-top:1em; font-style:italic;
-}
+  /* PANTALLA FINAL */
+  #end-screen {
+    position:fixed; inset:0; z-index:150; display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    background:radial-gradient(ellipse at 50% 50%, rgba(8,16,8,.92), rgba(0,0,0,.96));
+    backdrop-filter:blur(8px);
+  }
+  #end-screen.show { display:flex; }
+  #end-screen.win h2 { color:#e8c96a; }
+  #end-screen.lose h2 { color:#c45252; }
+  #end-screen h2 {
+    font-size:clamp(2rem,9vw,4rem); letter-spacing:.2em;
+    font-weight:normal; margin-bottom:.2em;
+    text-shadow:0 0 50px currentColor;
+  }
+  #end-screen .end-msg {
+    color:#cde8b0; font-size:.85rem; letter-spacing:.2em;
+    margin:1em 0 2.5em; text-align:center; line-height:1.8;
+  }
+  #end-screen button {
+    background:transparent; border:1.5px solid rgba(232,201,106,.7); color:#e8c96a;
+    padding:.9em 2.5em; font-size:.9rem; letter-spacing:.3em; text-transform:uppercase;
+    cursor:pointer; font-family:'Georgia',serif; border-radius:2px;
+  }
+
+  /* BRIEFING SCREEN */
+  #briefing {
+    position:fixed; inset:0; z-index:120; display:none;
+    flex-direction:column; align-items:center; justify-content:center;
+    background:radial-gradient(ellipse at 50% 55%,#0d2210 0%,#030803 100%);
+    padding:1.5em; overflow-y:auto;
+  }
+  #briefing.show { display:flex; }
+  #briefing h2 {
+    font-size:clamp(1.4rem,5vw,2.2rem); letter-spacing:.25em;
+    color:#e8c96a; font-weight:normal; margin-bottom:.4em;
+    text-shadow:0 0 30px rgba(232,201,106,.4);
+  }
+  #briefing .intro {
+    color:#7aaa6a; font-size:.7rem; letter-spacing:.3em;
+    text-transform:uppercase; margin-bottom:2em; text-align:center;
+  }
+  .mission-grid {
+    display:flex; flex-wrap:wrap; gap:14px; justify-content:center;
+    max-width:520px; margin-bottom:2em;
+  }
+  .mission-card {
+    width:130px; padding:14px 10px; border-radius:6px;
+    background:rgba(20,40,20,.4); border:1px solid rgba(232,201,106,.18);
+    text-align:center;
+  }
+  .mission-card .preview {
+    width:100px; height:100px; margin:0 auto .5em;
+    border-radius:4px; background:rgba(0,0,0,.3);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .mission-card canvas { width:100%; height:100%; display:block; border-radius:4px; }
+  .mission-card .name {
+    color:#e8c96a; font-size:.75rem; letter-spacing:.1em;
+    margin-bottom:.3em; line-height:1.3; min-height:2em;
+  }
+  .mission-card .qty {
+    color:#cde8b0; font-size:1.4rem; letter-spacing:.05em;
+    font-weight:bold;
+  }
+  .mission-card .qty::before { content:'×'; opacity:.6; margin-right:.2em; font-size:1rem; }
+  #briefing button {
+    background:transparent; border:1.5px solid rgba(232,201,106,.75);
+    color:#e8c96a; padding:.9em 2.8em; font-size:.9rem;
+    letter-spacing:.3em; text-transform:uppercase;
+    cursor:pointer; font-family:'Georgia',serif; border-radius:2px;
+    transition:all .3s;
+  }
+  #briefing button:active { background:rgba(232,201,106,.12); }
+  #briefing .hint {
+    color:#7aaa6a99; font-size:.6rem; letter-spacing:.2em;
+    text-align:center; margin-top:1em; font-style:italic;
+  }
 </style>
-
 </head>
 <body>
 
@@ -271,12 +349,57 @@ text-align:center; margin-top:1em; font-style:italic;
   <div class="ornament"></div>
   <p class="subtitle">Bosque · Valle Central · Chile</p>
   <div class="ornament"></div>
-  <div class="difficulty-row">
-    <button class="diff-btn selected" data-level="3">Básico<span class="meta">3 plantas</span></button>
-    <button class="diff-btn" data-level="5">Medio<span class="meta">5 plantas</span></button>
-    <button class="diff-btn" data-level="10">Avanzado<span class="meta">10 plantas</span></button>
+  <button class="lobby-btn" id="btn-solo" style="max-width:280px;margin-bottom:.5em">Jugar solo</button>
+  <button class="lobby-btn secondary" id="btn-multi" style="max-width:280px">Jugar en cooperativo</button>
+</div>
+
+<!-- LOBBY MULTIJUGADOR -->
+<div id="lobby-screen">
+  <h2>Cooperativo</h2>
+  <p class="lobby-sub">2 jugadores · 1 misión compartida</p>
+
+  <!-- Crear sala -->
+  <div class="lobby-card" id="card-create">
+    <h3>Crear sala</h3>
+    <p style="color:#8aaa70;font-size:.72rem;letter-spacing:.1em;margin-bottom:.8em;line-height:1.6">
+      Elige la dificultad y comparte el código con tu compañero
+    </p>
+    <div class="difficulty-row" style="margin-bottom:.8em">
+      <button class="diff-btn selected" data-level="3">Básico<span class="meta">3 plantas</span></button>
+      <button class="diff-btn" data-level="5">Medio<span class="meta">5 plantas</span></button>
+      <button class="diff-btn" data-level="10">Avanzado<span class="meta">10 plantas</span></button>
+    </div>
+    <button class="lobby-btn" id="btn-create">Crear sala</button>
   </div>
-  <button id="start-btn">Comenzar</button>
+
+  <!-- Código generado (oculto hasta crear) -->
+  <div class="lobby-card" id="card-code" style="display:none">
+    <h3>Tu código de sala</h3>
+    <div class="room-code-display" id="room-code-display">—</div>
+    <p class="lobby-hint">Comparte este código con tu compañero</p>
+    <div class="lobby-status" id="status-host">Esperando a tu compañero…</div>
+    <button class="lobby-btn" id="btn-start-multi" style="display:none">Comenzar partida</button>
+  </div>
+
+  <!-- Unirse a sala -->
+  <div class="lobby-card" id="card-join">
+    <h3>Unirse a sala</h3>
+    <input class="lobby-input" id="code-input" placeholder="BOSQUE-1234" maxlength="11"/>
+    <button class="lobby-btn" id="btn-join">Unirse</button>
+    <div class="lobby-status" id="status-guest"></div>
+  </div>
+
+  <button class="lobby-btn secondary" id="btn-back" style="max-width:200px;margin-top:.5em">← Volver</button>
+</div>
+
+<!-- HUD del compañero (visible durante el juego) -->
+<div id="peer-hud">
+  <span class="peer-name" id="peer-name">Compañero</span>
+  <div class="peer-drops">
+    <div class="peer-drop" id="peer-drop-1"></div>
+    <div class="peer-drop" id="peer-drop-2"></div>
+  </div>
+  <span class="peer-dead" id="peer-dead" style="display:none">💀</span>
 </div>
 
 <div id="hud">
@@ -285,7 +408,6 @@ text-align:center; margin-top:1em; font-style:italic;
 <div id="biome-label">Bosque<br>Esclerófilo</div>
 
 <!-- Medidor de agua: 2 gotas -->
-
 <div id="water-meter">
   <div class="drop" id="drop-1">
     <svg viewBox="0 0 28 36">
@@ -323,7 +445,6 @@ text-align:center; margin-top:1em; font-style:italic;
 </div>
 
 <!-- Botón pantalla completa -->
-
 <button id="fullscreen-btn" aria-label="Pantalla completa" title="Pantalla completa">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3 8V3h5M21 8V3h-5M3 16v5h5M21 16v5h-5"/>
@@ -331,15 +452,12 @@ text-align:center; margin-top:1em; font-style:italic;
 </button>
 
 <!-- Tinte rojo de deshidratación -->
-
 <div id="red-tint"></div>
 
 <!-- Tag de versión (esquina inferior izquierda) -->
-
-<div id="version-tag">v0.2.5</div>
+<div id="version-tag">v0.3.1</div>
 
 <!-- Pantalla final -->
-
 <div id="end-screen">
   <h2 id="end-title">Bien hecho</h2>
   <div class="ornament"></div>
@@ -349,7 +467,6 @@ text-align:center; margin-top:1em; font-style:italic;
 </div>
 
 <!-- Pantalla de briefing -->
-
 <div id="briefing">
   <h2>Tu misión</h2>
   <p class="intro">Encuentra y recolecta:</p>
@@ -367,7 +484,6 @@ text-align:center; margin-top:1em; font-style:italic;
 <canvas id="canvas"></canvas>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
 <script>
 // ══════════════════════════════════════════════════════════════════
 //  RENDERER
@@ -383,7 +499,7 @@ renderer.toneMappingExposure = 1.0;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x6da898);
-scene.fog = new THREE.FogExp2(0x6da898, 0.032);
+scene.fog = new THREE.FogExp2(0x6da898, 0.018);
 
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth/window.innerHeight, 0.1, 200);
 
@@ -396,7 +512,7 @@ scene.add(ambient);
 const sun = new THREE.DirectionalLight(0xffecb0, 2.2);
 sun.position.set(25, 55, 15);
 sun.castShadow = true;
-sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.camera.left = sun.shadow.camera.bottom = -100;
 sun.shadow.camera.right = sun.shadow.camera.top = 100;
 sun.shadow.camera.far = 250;
@@ -484,56 +600,56 @@ function addTree(x, z, type) {
 
   if (type === 0) { // Quillay — copa redondeada multicapa
     const h = 3.8 + Math.random()*2.2;
-    const trGeo = new THREE.CylinderGeometry(.18+Math.random()*.06, .28+Math.random()*.08, h, 6);
+    const trGeo = new THREE.CylinderGeometry(.18+Math.random()*.06, .28+Math.random()*.08, h, 8);
     const tr = new THREE.Mesh(trGeo, new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.07,.35,.28+Math.random()*.08)}));
     tr.position.y = h/2; tr.castShadow = true; g.add(tr);
-    const layers = 2 + Math.floor(Math.random()*2);
+    const layers = 3 + Math.floor(Math.random()*3);
     for (let i = 0; i < layers; i++) {
       const r = (1.6 - i*.2) + Math.random()*.35;
       const canopy = new THREE.Mesh(
-        new THREE.SphereGeometry(r, 6, 5),
+        new THREE.SphereGeometry(r, 9, 7),
         new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.28+Math.random()*.06, .55, .22+Math.random()*.1)})
       );
       canopy.position.set((Math.random()-.5)*.7, h+.3+i*.6, (Math.random()-.5)*.7);
       canopy.scale.y = .8 + Math.random()*.25;
-      canopy.castShadow = (i === 0); // solo la capa principal
-      g.add(canopy);
+      canopy.castShadow = true; g.add(canopy);
     }
   } else if (type === 1) { // Peumo — copa densa y oscura
     const h = 3 + Math.random()*1.8;
     const tr = new THREE.Mesh(
-      new THREE.CylinderGeometry(.14, .22, h, 6),
+      new THREE.CylinderGeometry(.14, .22, h, 8),
       new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.07,.4,.22+Math.random()*.07)})
     );
     tr.position.y = h/2; tr.castShadow = true; g.add(tr);
+    // copa principal
     const c1 = new THREE.Mesh(
-      new THREE.SphereGeometry(1.9+Math.random()*.5, 7, 6),
+      new THREE.SphereGeometry(1.9+Math.random()*.5, 9, 8),
       new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.27+Math.random()*.04, .5, .19+Math.random()*.07)})
     );
     c1.position.y = h+.6; c1.scale.set(1,.82,1); c1.castShadow = true; g.add(c1);
+    // copa secundaria offset
     const c2 = new THREE.Mesh(
-      new THREE.SphereGeometry(1.2+Math.random()*.3, 6, 5),
+      new THREE.SphereGeometry(1.2+Math.random()*.3, 8, 7),
       new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.29+Math.random()*.04, .5, .21+Math.random()*.06)})
     );
     c2.position.set((Math.random()-.5)*.8, h+1.2, (Math.random()-.5)*.8);
-    g.add(c2);
+    c2.castShadow = true; g.add(c2);
   } else { // Ciprés de la Cordillera — columnar, oscuro
     const h = 5.5 + Math.random()*3.5;
     const tr = new THREE.Mesh(
-      new THREE.CylinderGeometry(.1, .2, h, 6),
+      new THREE.CylinderGeometry(.1, .2, h, 8),
       new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.07,.3,.22)})
     );
     tr.position.y = h/2; tr.castShadow = true; g.add(tr);
-    const lvls = 4 + Math.floor(Math.random()*3);
+    const lvls = 6 + Math.floor(Math.random()*4);
     for (let i = 0; i < lvls; i++) {
       const r = Math.max(.1, .95 - i*.1 + Math.random()*.05);
       const cone = new THREE.Mesh(
-        new THREE.ConeGeometry(r, 1.3, 6),
+        new THREE.ConeGeometry(r, 1.3, 8),
         new THREE.MeshLambertMaterial({color:new THREE.Color().setHSL(.32+Math.random()*.03, .6, .18+Math.random()*.07)})
       );
       cone.position.y = 1.8 + i*.9 + (h - lvls*.9)*.45;
-      cone.castShadow = (i === 0);
-      g.add(cone);
+      cone.castShadow = true; g.add(cone);
     }
   }
   scene.add(g);
@@ -1464,14 +1580,13 @@ function doInteract(item){
   if(gameOver || item.collected || item.collecting) return;
 
   if(item.type === 'agua'){
-    // Beber siempre reinicia el temporizador (1m30s totales nuevamente),
-    // aunque ya estés en el nivel máximo
     game.water = game.waterMax;
     game.waterTimer = 0;
     updateWaterMeter();
     redTint.style.opacity = '0';
     redTint.classList.remove('dying');
     showNotif(`💧 Bebiste de la ${item.label}`);
+    if(!net.isSolo && net.role) sendNet('water_drunk', {});
     return;
   }
 
@@ -1481,9 +1596,6 @@ function doInteract(item){
   item.collectStartScale = item.obj.scale.x || 1;
   item.collectStartY = item.obj.position.y;
 
-  // Verificar si esta especie está en la misión y si aún hay cupo.
-  // No importa si la instancia fue marcada como "decoy": cualquier planta
-  // de una especie buscada cuenta mientras falte cupo de esa especie.
   const needed = game.mission[item.species] || 0;
   const haveOf = game.collectedBySpecies[item.species] || 0;
   const counts = needed > 0 && haveOf < needed;
@@ -1497,12 +1609,21 @@ function doInteract(item){
       setTimeout(() => endGame(true), 800);
     }
   } else {
-    // No suma: o no es de la misión, o ya completaste el cupo
     if(needed > 0 && haveOf >= needed){
       showNotif(`⚠ ${item.label} — ya tenías suficientes`);
     } else {
       showNotif(`⚠ ${item.label} — no es parte de la misión`);
     }
+  }
+
+  // Notificar al compañero via servidor
+  if(!net.isSolo && net.role){
+    sendNet('plant_collected', {
+      plantIndex: interactables.indexOf(item),
+      counted: counts,
+      species: item.species,
+      label: item.label,
+    });
   }
 }
 
@@ -1829,17 +1950,6 @@ const game = {
   WATER_INTERVALS: [30, 60],  // INTERVALS[level-1] da el tiempo
 };
 
-// ── Selector de dificultad ──────────────────────────────────────
-let selectedDifficulty = 3;
-const diffBtns = document.querySelectorAll('.diff-btn');
-diffBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    diffBtns.forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    selectedDifficulty = parseInt(btn.dataset.level, 10);
-  });
-});
-
 // Generar mini-render de cada planta para el briefing
 function renderPlantPreview(canvas, key) {
   const w = canvas.width = 100, h = canvas.height = 100;
@@ -1890,42 +2000,390 @@ function showBriefing(){
   document.getElementById('briefing').classList.add('show');
 }
 
-document.getElementById('start-btn').addEventListener('click',()=>{
-  document.getElementById('title-screen').style.display='none';
+// ══════════════════════════════════════════════════════════════════
+//  MULTIJUGADOR — WebSocket
+// ══════════════════════════════════════════════════════════════════
+const WS_URL = 'wss://pacha-multiplayer-950293517077.southamerica-west1.run.app';
+
+const net = {
+  ws: null,
+  role: null,       // 'host' | 'guest' | null (solo)
+  code: null,
+  seed: null,
+  peerReady: false,
+  peerWater: 2,
+  peerDead: false,
+  isSolo: false,
+};
+
+// Generador de números pseudo-aleatorios determinista (Mulberry32)
+// Usado para generar el mismo mundo en ambos clientes con la misma seed
+function makePRNG(seed) {
+  let s = seed >>> 0;
+  return function() {
+    s += 0x6D2B79F5;
+    let z = s;
+    z = Math.imul(z ^ (z >>> 15), z | 1);
+    z ^= z + Math.imul(z ^ (z >>> 7), z | 61);
+    return ((z ^ (z >>> 14)) >>> 0) / 4294967296;
+  };
+}
+let rng = Math.random; // default: random normal; se reemplaza con seed en MP
+
+function connect() {
+  return new Promise((resolve, reject) => {
+    let resolved = false;
+    let ws;
+    try {
+      ws = new WebSocket(WS_URL);
+    } catch(err) {
+      reject(new Error('WS no soportado: ' + err.message));
+      return;
+    }
+    // Timeout de conexión
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        try { ws.close(); } catch(e){}
+        reject(new Error('Timeout conectando (10s)'));
+      }
+    }, 10000);
+    ws.onopen = () => {
+      resolved = true;
+      clearTimeout(timeout);
+      net.ws = ws;
+      resolve(ws);
+    };
+    ws.onerror = (ev) => {
+      console.error('[WS error]', ev);
+      if (!resolved) {
+        clearTimeout(timeout);
+        reject(new Error('Error de WebSocket'));
+      }
+    };
+    ws.onclose = (ev) => {
+      console.log('[WS closed]', ev.code, ev.reason);
+      if (!resolved) {
+        clearTimeout(timeout);
+        reject(new Error(`Conexión cerrada (código ${ev.code})`));
+      } else if (started && !gameOver) {
+        showNotif('🔌 Conexión perdida');
+      }
+    };
+    ws.onmessage = (ev) => handleServerMsg(JSON.parse(ev.data));
+  });
+}
+
+function sendNet(type, data = {}) {
+  if (net.ws && net.ws.readyState === 1) {
+    net.ws.send(JSON.stringify({ type, ...data }));
+  }
+}
+
+function handleServerMsg(msg) {
+  switch (msg.type) {
+
+    case 'room_created':
+      net.code = msg.code;
+      net.seed = msg.seed;
+      net.role = 'host';
+      document.getElementById('room-code-display').textContent = msg.code;
+      document.getElementById('card-code').style.display = 'block';
+      document.getElementById('status-host').textContent = 'Esperando a tu compañero…';
+      // Enviar misión al servidor (por si el guest llega después)
+      sendNet('set_mission', {
+        difficulty: selectedDifficulty,
+        mission: game.mission,
+      });
+      break;
+
+    case 'peer_joined':
+      document.getElementById('status-host').textContent = '✦ ¡Compañero conectado! Puedes iniciar.';
+      document.getElementById('status-host').className = 'lobby-status ok';
+      document.getElementById('btn-start-multi').style.display = 'block';
+      net.peerReady = true;
+      break;
+
+    case 'joined':
+      net.code = msg.code;
+      net.seed = msg.seed;
+      net.role = 'guest';
+      // Si el host ya configuró la misión, recibirla
+      if (msg.mission) {
+        game.mission = msg.mission;
+        game.goal = msg.difficulty;
+        selectedDifficulty = msg.difficulty;
+      }
+      document.getElementById('status-guest').textContent = '✦ ¡Conectado! Esperando al anfitrión…';
+      document.getElementById('status-guest').className = 'lobby-status ok';
+      break;
+
+    case 'mission_set':
+      game.mission = msg.mission;
+      game.goal = msg.difficulty;
+      selectedDifficulty = msg.difficulty;
+      break;
+
+    case 'game_started':
+      // El host inició — el guest también arranca
+      startGame();
+      break;
+
+    case 'peer_pose':
+      // Actualizar posición del jugador remoto
+      peerState.targetX   = msg.x;
+      peerState.targetZ   = msg.z;
+      peerState.targetRotY = msg.rotY;
+      peerState.moving    = msg.moving;
+      peerState.running   = msg.running;
+      break;
+
+    case 'plant_collected':
+      // El compañero recogió una planta — hacerla desaparecer en nuestro mundo
+      const item = interactables[msg.plantIndex];
+      if (item && !item.collected && !item.collecting) {
+        item.collecting = true;
+        item.collectT = 0;
+        item.collectStartScale = item.obj.scale.x || 1;
+        item.collectStartY = item.obj.position.y;
+        if (msg.counted) {
+          // Actualizar progreso compartido
+          game.collected++;
+          game.collectedBySpecies[msg.species] = (game.collectedBySpecies[msg.species] || 0) + 1;
+          document.getElementById('goal-current').textContent = game.collected;
+          showNotif(`✦ ${msg.label} (compañero) ${game.collected}/${game.goal}`);
+          if (game.collected >= game.goal) setTimeout(() => endGame(true), 800);
+        }
+      }
+      break;
+
+    case 'peer_water_state':
+      net.peerWater = msg.water;
+      net.peerDead  = msg.dead || false;
+      updatePeerHUD();
+      if (msg.dead) showNotif('💀 Tu compañero se quedó sin agua');
+      break;
+
+    case 'peer_disconnected':
+      showNotif('🔌 Tu compañero se desconectó');
+      net.peerReady = false;
+      peerChar.visible = false;
+      break;
+
+    case 'game_over':
+      if (msg.result === 'win') endGame(true);
+      else showNotif('💀 Tu compañero cayó sin agua…');
+      break;
+
+    case 'join_failed':
+      const reason = msg.reason === 'not_found'
+        ? 'Sala no encontrada. Verifica el código.'
+        : 'La sala ya tiene 2 jugadores.';
+      document.getElementById('status-guest').textContent = reason;
+      document.getElementById('status-guest').className = 'lobby-status error';
+      break;
+
+    case 'error':
+      console.warn('[server error]', msg.message);
+      break;
+  }
+}
+
+// ── Personaje del jugador remoto (clon simplificado) ─────────────
+const peerChar = new THREE.Group();
+peerChar.visible = false;
+scene.add(peerChar);
+
+// Construir versión simplificada del personaje para el peer
+// (mismo aspecto pero sin animaciones complejas — las hace el cliente remoto)
+function buildPeerChar() {
+  const mat = (c) => new THREE.MeshLambertMaterial({color:c});
+  const mk  = (geo,c) => { const m=new THREE.Mesh(geo,mat(c)); m.castShadow=true; return m; };
+  // Cuerpo
+  const body = mk(new THREE.CylinderGeometry(.22,.26,.7,8), 0x6a1515);
+  body.position.y = .9; peerChar.add(body);
+  // Poncho
+  const poncho = mk(new THREE.CylinderGeometry(.34,.38,.5,8,1,true), 0x5a1010);
+  poncho.material.side = THREE.DoubleSide; poncho.position.y=1.05; peerChar.add(poncho);
+  // Franja
+  const belt = mk(new THREE.CylinderGeometry(.235,.235,.06,8), 0xe8c050);
+  belt.position.y=.75; peerChar.add(belt);
+  // Cabeza
+  const head = mk(new THREE.SphereGeometry(.22,8,7), 0xc07040);
+  head.position.y=1.55; peerChar.add(head);
+  // Chullo
+  const chullo = mk(new THREE.CylinderGeometry(.195,.23,.2,10), 0xaa2020);
+  chullo.position.y=1.9; peerChar.add(chullo);
+  const peak = mk(new THREE.ConeGeometry(.13,.3,10), 0xcc2828);
+  peak.position.y=2.08; peerChar.add(peak);
+  const pompon = mk(new THREE.SphereGeometry(.06,7,6), 0xe8b020);
+  pompon.position.y=2.25; peerChar.add(pompon);
+  // Indicador "compañero" — disco de color encima de la cabeza
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(.25,.04,6,16),
+    new THREE.MeshBasicMaterial({color:0x40ff80})
+  );
+  ring.rotation.x = Math.PI/2;
+  ring.position.y = 2.55;
+  peerChar.add(ring);
+}
+buildPeerChar();
+
+// Estado interpolado del peer
+const peerState = {
+  x:0, z:0, rotY:0,
+  targetX:0, targetZ:0, targetRotY:0,
+  moving:false, running:false,
+  walkCycle:0,
+};
+
+function updatePeerHUD() {
+  const hud = document.getElementById('peer-hud');
+  hud.classList.toggle('show', net.role !== null && !net.isSolo);
+  document.getElementById('peer-drop-1').classList.toggle('empty', net.peerWater < 1);
+  document.getElementById('peer-drop-2').classList.toggle('empty', net.peerWater < 2);
+  document.getElementById('peer-dead').style.display = net.peerDead ? 'inline' : 'none';
+}
+
+// ── Posición: enviar al servidor ~15 veces/s ─────────────────────
+let poseTimer = 0;
+const POSE_INTERVAL = 1/15;
+
+// ══════════════════════════════════════════════════════════════════
+//  UI — LOBBY HANDLERS
+// ══════════════════════════════════════════════════════════════════
+// Selector de dificultad (dentro del lobby)
+let selectedDifficulty = 3;
+const diffBtns = document.querySelectorAll('.diff-btn');
+diffBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    diffBtns.forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedDifficulty = parseInt(btn.dataset.level, 10);
+    // Si ya somos host, actualizar misión en servidor
+    if (net.role === 'host') {
+      game.mission = generateMission(selectedDifficulty);
+      game.goal = selectedDifficulty;
+      sendNet('set_mission', { difficulty: selectedDifficulty, mission: game.mission });
+    }
+  });
+});
+
+// Botón "Jugar solo"
+document.getElementById('btn-solo').addEventListener('click', () => {
+  net.isSolo = true;
+  document.getElementById('title-screen').style.display = 'none';
+  initSoloGame();
+});
+
+// Botón "Jugar cooperativo"
+document.getElementById('btn-multi').addEventListener('click', () => {
+  document.getElementById('title-screen').style.display = 'none';
+  document.getElementById('lobby-screen').classList.add('show');
+  // Preparar misión por defecto
+  game.mission = generateMission(selectedDifficulty);
+  game.goal = selectedDifficulty;
+});
+
+// Volver al título
+document.getElementById('btn-back').addEventListener('click', () => {
+  document.getElementById('lobby-screen').classList.remove('show');
+  document.getElementById('title-screen').style.display = 'flex';
+  if (net.ws) { net.ws.close(); net.ws = null; }
+});
+
+// Crear sala
+document.getElementById('btn-create').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-create');
+  btn.textContent = 'Conectando…'; btn.disabled = true;
+  document.getElementById('status-host').textContent = 'Conectando al servidor (puede tardar 3-5s la primera vez)…';
+  document.getElementById('status-host').className = 'lobby-status';
+  try {
+    await connect();
+    sendNet('create_room');
+  } catch(e) {
+    btn.textContent = 'Crear sala';
+    btn.disabled = false;
+    document.getElementById('status-host').textContent = '❌ ' + e.message;
+    document.getElementById('status-host').className = 'lobby-status error';
+    console.error('Create room error:', e);
+  }
+});
+
+// Unirse a sala
+document.getElementById('btn-join').addEventListener('click', async () => {
+  const code = document.getElementById('code-input').value.trim().toUpperCase();
+  if (!code) return;
+  const btn = document.getElementById('btn-join');
+  btn.textContent = 'Conectando…'; btn.disabled = true;
+  document.getElementById('status-guest').textContent = 'Conectando…';
+  document.getElementById('status-guest').className = 'lobby-status';
+  try {
+    await connect();
+    sendNet('join_room', { code });
+  } catch(e) {
+    btn.textContent = 'Unirse';
+    btn.disabled = false;
+    document.getElementById('status-guest').textContent = '❌ ' + e.message;
+    document.getElementById('status-guest').className = 'lobby-status error';
+    console.error('Join room error:', e);
+  }
+});
+
+// Host inicia partida
+document.getElementById('btn-start-multi').addEventListener('click', () => {
+  sendNet('start_game');
+  startGame();
+});
+
+// ── Iniciar partida solo ─────────────────────────────────────────
+function initSoloGame() {
   game.goal = selectedDifficulty;
   game.collected = 0;
   game.collectedBySpecies = {};
   game.water = 2;
   game.waterTimer = 0;
-  // Generar misión aleatoria
   game.mission = generateMission(game.goal);
   document.getElementById('goal-total').textContent = game.goal;
   document.getElementById('goal-current').textContent = '0';
   updateWaterMeter();
-  // Mostrar briefing antes de comenzar
   showBriefing();
-});
+}
 
+// ── Iniciar partida multijugador ─────────────────────────────────
+function startGame() {
+  document.getElementById('lobby-screen').classList.remove('show');
+  document.getElementById('briefing').classList.remove('show');
+  // Usar seed del servidor para generar el mismo mundo en ambos clientes
+  rng = makePRNG(net.seed);
+  game.goal = selectedDifficulty;
+  game.collected = 0;
+  game.collectedBySpecies = {};
+  game.water = 2;
+  game.waterTimer = 0;
+  document.getElementById('goal-total').textContent = game.goal;
+  document.getElementById('goal-current').textContent = '0';
+  updateWaterMeter();
+  updatePeerHUD();
+  showBriefing();
+}
+
+// ── Briefing start ────────────────────────────────────────────────
 document.getElementById('briefing-start').addEventListener('click', () => {
   document.getElementById('briefing').classList.remove('show');
-  // Posición aleatoria de la vertiente
+  // En modo multi usar el rng seeded para posiciones deterministas
+  const savedRandom = Math.random;
+  if (!net.isSolo && net.seed !== null) Math.random = rng;
   const pondPos = placePond();
-  // Sembrar plantas según la misión (con decoys), evitando la vertiente
   plantWorld(game.mission, pondPos);
-  // Posicionar el zorro en el bosque
   placeFox();
   fox.visible = true;
+  if (!net.isSolo && net.seed !== null) Math.random = savedRandom;
   started = true; gameOver = false;
   clock.start();
-  // Mensaje al jugador
-  setTimeout(() => {
-    showNotif(`💧 La vertiente fue localizada en el bosque`);
-  }, 600);
+  setTimeout(() => showNotif('💧 La vertiente fue localizada en el bosque'), 600);
 });
 
-document.getElementById('restart-btn').addEventListener('click', () => {
-  location.reload();
-});
+document.getElementById('restart-btn').addEventListener('click', () => location.reload());
 
 const envEl    = document.getElementById('env-name');
 const cp2      = new THREE.Vector2();
@@ -2155,6 +2613,8 @@ function animate(){
       game.waterTimer = 0;
       game.water = Math.max(0, game.water - 1);
       updateWaterMeter();
+      if(!net.isSolo && net.role)
+        sendNet('water_state', { water: game.water, dead: game.water === 0 });
       if(game.water === 0){
         endGame(false);
       } else {
@@ -2201,6 +2661,41 @@ function animate(){
   const pd = char.position.distanceTo(pondGroup.position);
   const d0 = Math.sqrt(char.position.x**2+char.position.z**2);
   envEl.textContent = pd<6?'Orilla de Vertiente':d0<6?'Claro del Bosque':d0<20?'Sotobosque':'Bosque Profundo';
+
+  // ── MULTIJUGADOR: enviar pose y animar peer ──────────────────
+  if(!net.isSolo && net.role && started && !gameOver){
+    // Enviar posición propia al servidor
+    poseTimer += dt;
+    if(poseTimer >= POSE_INTERVAL){
+      poseTimer = 0;
+      sendNet('pose', {
+        x: char.position.x,
+        z: char.position.z,
+        rotY: char.rotation.y,
+        moving, running: keys['ShiftLeft']||keys['ShiftRight'],
+      });
+    }
+    // Interpolar y mostrar personaje del peer
+    if(net.peerReady || net.role === 'guest'){
+      peerChar.visible = true;
+      // Interpolación suave de posición (reduce jitter de latencia)
+      peerState.x += (peerState.targetX - peerState.x) * Math.min(1, dt * 12);
+      peerState.z += (peerState.targetZ - peerState.z) * Math.min(1, dt * 12);
+      // Interpolación angular corta
+      let drot = peerState.targetRotY - peerState.rotY;
+      while(drot > Math.PI) drot -= Math.PI*2;
+      while(drot < -Math.PI) drot += Math.PI*2;
+      peerState.rotY += drot * Math.min(1, dt * 10);
+      peerChar.position.set(
+        peerState.x,
+        meshGroundY(peerState.x, peerState.z),
+        peerState.z
+      );
+      peerChar.rotation.y = peerState.rotY;
+    } else {
+      peerChar.visible = false;
+    }
+  }
 
   // ── FAUNA ──────────────────────────────────────────────────
   if(started && !gameOver) updateFox(dt, char.position);
@@ -2280,6 +2775,5 @@ document.addEventListener('webkitfullscreenchange', () => {
   }, 100);
 });
 </script>
-
 </body>
 </html>
