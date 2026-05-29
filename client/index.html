@@ -455,7 +455,7 @@
 <div id="red-tint"></div>
 
 <!-- Tag de versión (esquina inferior izquierda) -->
-<div id="version-tag">v0.3.2</div>
+<div id="version-tag">v0.3.3</div>
 
 <!-- Pantalla final -->
 <div id="end-screen">
@@ -743,10 +743,29 @@ const rim = new THREE.Mesh(rimGeo, new THREE.MeshLambertMaterial({color:0x5a7840
 rim.position.y = .04;
 pondGroup.add(rim);
 
-// Posiciona la vertiente en una ubicación aleatoria respetando límites y árboles
-function placePond(forced) {
+const pondGroup2 = new THREE.Group();
+scene.add(pondGroup2);
+const pondGeo2 = new THREE.CircleGeometry(2.8, 24);
+pondGeo2.rotateX(-Math.PI/2);
+const pond2Mesh = new THREE.Mesh(pondGeo2, new THREE.MeshLambertMaterial({color:0x3580a0, transparent:true, opacity:.85}));
+pond2Mesh.position.y = .05;
+pondGroup2.add(pond2Mesh);
+const sparkGeo2 = new THREE.CircleGeometry(2.8, 24);
+sparkGeo2.rotateX(-Math.PI/2);
+const sparkle2 = new THREE.Mesh(sparkGeo2, new THREE.MeshBasicMaterial({color:0xaadff0, transparent:true, opacity:.25}));
+sparkle2.position.y = .08;
+pondGroup2.add(sparkle2);
+const rimGeo2 = new THREE.RingGeometry(2.8, 3.4, 24);
+rimGeo2.rotateX(-Math.PI/2);
+const rim2 = new THREE.Mesh(rimGeo2, new THREE.MeshLambertMaterial({color:0x5a7840, transparent:true, opacity:.7}));
+rim2.position.y = .04;
+pondGroup2.add(rim2);
+
+// Posiciona una vertiente en una ubicación aleatoria respetando límites, árboles y otras vertientes
+function placePond(targetGroup, forced, excludePositions) {
+  excludePositions = excludePositions || [];
   if (forced) {
-    pondGroup.position.set(forced.x, hAt(forced.x, forced.z), forced.z);
+    targetGroup.position.set(forced.x, hAt(forced.x, forced.z), forced.z);
     return { x: forced.x, z: forced.z };
   }
   let tries = 0;
@@ -761,14 +780,20 @@ function placePond(forced) {
       if (Math.hypot(x - tp.x, z - tp.y) < 4) { ok = false; break; }
     }
     if (!ok) continue;
+    for (const ep of excludePositions) {
+      if (Math.hypot(x - ep.x, z - ep.z) < 20) { ok = false; break; }
+    }
+    if (!ok) continue;
     const y = hAt(x, z);
-    pondGroup.position.set(x, y, z);
+    targetGroup.position.set(x, y, z);
     return { x, z };
   }
-  // Fallback
-  const fbY = hAt(15, -10);
-  pondGroup.position.set(15, fbY, -10);
-  return { x: 15, z: -10 };
+  // Fallback: si hay exclusiones, usar posición opuesta
+  const fbX = excludePositions.length > 0 ? -15 : 15;
+  const fbZ = -10;
+  const fbY = hAt(fbX, fbZ);
+  targetGroup.position.set(fbX, fbY, fbZ);
+  return { x: fbX, z: fbZ };
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1121,7 +1146,7 @@ function generateMission(goal) {
 
 // Posiciones aleatorias para sembrar plantas: distribución uniforme en
 // toda la zona explorable, evitando árboles, vertiente y el punto de inicio.
-function generatePlantPositions(n, pondPos) {
+function generatePlantPositions(n, pondPositions) {
   const positions = [];
   const minDist     = 4.5;  // separación entre plantas
   const minTreeDist = 1.5;  // separación de árboles
@@ -1137,8 +1162,12 @@ function generatePlantPositions(n, pondPos) {
     const z = (Math.random() - .5) * 2 * half;
     // Lejos del centro inicial (jugador)
     if (x*x + z*z < minStart*minStart) continue;
-    // Lejos de la vertiente
-    if (pondPos && Math.hypot(x - pondPos.x, z - pondPos.z) < minPondDist) continue;
+    // Lejos de las vertientes
+    let nearPond = false;
+    for (const pp of (pondPositions || [])) {
+      if (Math.hypot(x - pp.x, z - pp.z) < minPondDist) { nearPond = true; break; }
+    }
+    if (nearPond) continue;
     // Lejos de otras plantas
     let ok = true;
     for (const p of positions) {
@@ -1156,7 +1185,7 @@ function generatePlantPositions(n, pondPos) {
 }
 
 // Siembra el bosque: plantas de la misión + ~35% extra como ruido
-function plantWorld(mission, pondPos, preComputedLayout) {
+function plantWorld(mission, pondPos, preComputedLayout, pondPos2) {
   let allKeys, positions;
 
   if (preComputedLayout) {
@@ -1181,11 +1210,12 @@ function plantWorld(mission, pondPos, preComputedLayout) {
       const j = Math.floor(Math.random() * (i + 1));
       [allKeys[i], allKeys[j]] = [allKeys[j], allKeys[i]];
     }
-    positions = generatePlantPositions(allKeys.length, pondPos);
+    positions = generatePlantPositions(allKeys.length, [pondPos, pondPos2].filter(Boolean));
     // Si somos host en modo multi, guardar el layout para enviarlo
     if (net.role === 'host') {
       worldLayoutCache = {
         pond: { x: pondPos.x, z: pondPos.z },
+        pond2: pondPos2 ? { x: pondPos2.x, z: pondPos2.z } : null,
         plants: positions.slice(0, allKeys.length).map((p, i) => ({
           species: allKeys[i], x: p.x, z: p.z
         })),
@@ -1232,6 +1262,26 @@ interactables.push({
   obj: pondGroup, type: 'agua', label: 'Vertiente', radius: 4.5,
   glowColor: 0x60d0ff,
   glowParts: waterDrops, baseScale: 1,
+  isWater: true
+});
+
+const waterDrops2 = [];
+for (let i = 0; i < 6; i++) {
+  const drop = new THREE.Mesh(
+    new THREE.SphereGeometry(.07, 6, 5),
+    emissiveMat(0x80e0ff, 0xa0f0ff, .8)
+  );
+  drop.userData.phase = (i/6) * Math.PI * 2;
+  drop.userData.height = .2 + Math.random()*.4;
+  drop.userData.radius = 2 + Math.random()*.6;
+  scene.add(drop);
+  waterDrops2.push(drop);
+}
+
+interactables.push({
+  obj: pondGroup2, type: 'agua', label: 'Vertiente', radius: 4.5,
+  glowColor: 0x60d0ff,
+  glowParts: waterDrops2, baseScale: 1,
   isWater: true
 });
 
@@ -1813,11 +1863,15 @@ function placeFox() {
       if (Math.hypot(x - tp.x, z - tp.y) < 2) { ok = false; break; }
     }
     if (!ok) continue;
-    // Lejos de la vertiente
-    if (pondGroup.position.lengthSq() > 0) {
-      const dx = x - pondGroup.position.x, dz = z - pondGroup.position.z;
-      if (dx*dx + dz*dz < 36) continue;
+    // Lejos de las vertientes
+    let nearPond2 = false;
+    for (const pg of [pondGroup, pondGroup2]) {
+      if (pg.position.lengthSq() > 0) {
+        const dx = x - pg.position.x, dz = z - pg.position.z;
+        if (dx*dx + dz*dz < 36) { nearPond2 = true; break; }
+      }
     }
+    if (nearPond2) continue;
     foxState.x = x; foxState.z = z;
     foxState.targetX = x; foxState.targetZ = z;
     foxState.mode = 'wander';
@@ -1969,8 +2023,8 @@ const game = {
   water: 2,             // niveles iniciales
   waterMax: 2,
   waterTimer: 0,        // segundos acumulados en el nivel actual
-  // Duración de cada nivel: nivel 2→1 dura 60s, nivel 1→0 dura 30s
-  WATER_INTERVALS: [30, 60],  // INTERVALS[level-1] da el tiempo
+  // Duración de cada nivel: nivel 2→1 dura 120s, nivel 1→0 dura 60s
+  WATER_INTERVALS: [60, 120],  // INTERVALS[level-1] da el tiempo
 };
 
 // Generar mini-render de cada planta para el briefing
@@ -2408,12 +2462,14 @@ let waitingForLayout = false;
 function seedWorld() {
   if (net.role === 'guest' && pendingWorldLayout) {
     // Guest: usar el layout que envió el host
-    placePond(pendingWorldLayout.pond);
+    placePond(pondGroup, pendingWorldLayout.pond);
+    placePond(pondGroup2, pendingWorldLayout.pond2 || { x: -15, z: -10 });
     plantWorld(game.mission, pondPosFromLayout(), pendingWorldLayout);
   } else {
     // Solo o host: generar normalmente
-    const pondPos = placePond();
-    plantWorld(game.mission, pondPos);
+    const pondPos = placePond(pondGroup);
+    const pondPos2 = placePond(pondGroup2, null, [pondPos]);
+    plantWorld(game.mission, pondPos, null, pondPos2);
     // Si somos host, enviar el layout al guest
     if (net.role === 'host' && worldLayoutCache) {
       sendNet('world_layout', { layout: worldLayoutCache });
@@ -2662,8 +2718,8 @@ function animate(){
   }
 
   // ── Consumo de agua por tiempo ──────────────────────────────
-  // Nivel 2 (lleno): dura 60s antes de bajar a 1
-  // Nivel 1 (advertencia): dura 30s antes de bajar a 0 (muerte)
+  // Nivel 2 (lleno): dura 120s antes de bajar a 1
+  // Nivel 1 (advertencia): dura 60s antes de bajar a 0 (muerte)
   if(game.water > 0){
     game.waterTimer += dt;
     const intervalIdx = Math.min(game.water - 1, game.WATER_INTERVALS.length - 1);
@@ -2686,7 +2742,7 @@ function animate(){
   // Solo cuando water === 1: el tinte va de 0 a fuerte conforme se agota
   if(game.water === 1){
     // 0 al inicio del nivel, ~1 cuando casi muere
-    const interval = game.WATER_INTERVALS[0]; // 30s
+    const interval = game.WATER_INTERVALS[0]; // 60s
     const progress = Math.min(1, game.waterTimer / interval);
     // Gradiente: empieza tenue desde los bordes, termina cubriendo todo en rojo intenso
     const edgeAlpha   = 0.15 + progress * 0.55;   // bordes
@@ -2717,7 +2773,7 @@ function animate(){
   }
 
   // ── HUD ─────────────────────────────────────────────────────
-  const pd = char.position.distanceTo(pondGroup.position);
+  const pd = Math.min(char.position.distanceTo(pondGroup.position), char.position.distanceTo(pondGroup2.position));
   const d0 = Math.sqrt(char.position.x**2+char.position.z**2);
   envEl.textContent = pd<6?'Orilla de Vertiente':d0<6?'Claro del Bosque':d0<20?'Sotobosque':'Bosque Profundo';
 
