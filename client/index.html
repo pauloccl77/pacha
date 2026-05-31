@@ -98,19 +98,19 @@
   }
 
   /* LOBBY MULTIJUGADOR */
-  #lobby-screen {
+  #lobby-screen, #solo-difficulty-screen {
     position:fixed; inset:0;
     background:radial-gradient(ellipse at 50% 60%, #0d2010 0%, #040a04 100%);
     display:none; flex-direction:column; align-items:center; justify-content:center;
     z-index:101; padding:1.5em 1em; overflow-y:auto;
   }
-  #lobby-screen.show { display:flex; }
-  #lobby-screen h2 {
+  #lobby-screen.show, #solo-difficulty-screen.show { display:flex; }
+  #lobby-screen h2, #solo-difficulty-screen h2 {
     font-size:clamp(1.4rem,6vw,2.5rem); letter-spacing:.2em;
     color:#e8c96a; font-weight:normal; margin-bottom:.3em;
     text-shadow:0 0 40px rgba(232,201,106,.4);
   }
-  #lobby-screen .lobby-sub {
+  #lobby-screen .lobby-sub, #solo-difficulty-screen .lobby-sub {
     color:#7aaa6a; font-size:.7rem; letter-spacing:.3em;
     text-transform:uppercase; margin-bottom:2em; opacity:.75;
   }
@@ -392,6 +392,21 @@
   <button class="lobby-btn secondary" id="btn-back" style="max-width:200px;margin-top:.5em">← Volver</button>
 </div>
 
+<!-- SELECTOR DIFICULTAD SOLO -->
+<div id="solo-difficulty-screen">
+  <h2>Dificultad</h2>
+  <p class="lobby-sub">Modo solo · elige tu desafío</p>
+  <div class="lobby-card">
+    <div class="difficulty-row">
+      <button class="diff-btn selected" data-level="3">Básico<span class="meta">3 plantas</span></button>
+      <button class="diff-btn" data-level="5">Medio<span class="meta">5 plantas</span></button>
+      <button class="diff-btn" data-level="10">Avanzado<span class="meta">10 plantas</span></button>
+    </div>
+    <button class="lobby-btn" id="btn-solo-start">Comenzar</button>
+  </div>
+  <button class="lobby-btn secondary" id="btn-solo-back" style="max-width:200px;margin-top:.5em">← Volver</button>
+</div>
+
 <!-- HUD del compañero (visible durante el juego) -->
 <div id="peer-hud">
   <span class="peer-name" id="peer-name">Compañero</span>
@@ -455,7 +470,7 @@
 <div id="red-tint"></div>
 
 <!-- Tag de versión (esquina inferior izquierda) -->
-<div id="version-tag">v0.3.3</div>
+<div id="version-tag">v0.3.4</div>
 
 <!-- Pantalla final -->
 <div id="end-screen">
@@ -2166,7 +2181,9 @@ function handleServerMsg(msg) {
       document.getElementById('room-code-display').textContent = msg.code;
       document.getElementById('card-code').style.display = 'block';
       document.getElementById('status-host').textContent = 'Esperando a tu compañero…';
-      // Enviar misión al servidor (por si el guest llega después)
+      // Regenerar misión con dificultad vigente y enviar al servidor
+      game.mission = generateMission(selectedDifficulty);
+      game.goal = selectedDifficulty;
       sendNet('set_mission', {
         difficulty: selectedDifficulty,
         mission: game.mission,
@@ -2338,9 +2355,9 @@ const POSE_INTERVAL = 1/15;
 // ══════════════════════════════════════════════════════════════════
 //  UI — LOBBY HANDLERS
 // ══════════════════════════════════════════════════════════════════
-// Selector de dificultad (dentro del lobby)
+// Selector de dificultad (lobby cooperativo)
 let selectedDifficulty = 3;
-const diffBtns = document.querySelectorAll('.diff-btn');
+const diffBtns = document.querySelectorAll('#card-create .diff-btn');
 diffBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     diffBtns.forEach(b => b.classList.remove('selected'));
@@ -2355,11 +2372,34 @@ diffBtns.forEach(btn => {
   });
 });
 
-// Botón "Jugar solo"
+// Selector de dificultad (modo solo)
+const soloDiffBtns = document.querySelectorAll('#solo-difficulty-screen .diff-btn');
+soloDiffBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    soloDiffBtns.forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedDifficulty = parseInt(btn.dataset.level, 10);
+  });
+});
+
+// Botón "Jugar solo" → mostrar selector de dificultad
 document.getElementById('btn-solo').addEventListener('click', () => {
   net.isSolo = true;
   document.getElementById('title-screen').style.display = 'none';
+  document.getElementById('solo-difficulty-screen').classList.add('show');
+});
+
+// Solo: Comenzar
+document.getElementById('btn-solo-start').addEventListener('click', () => {
+  document.getElementById('solo-difficulty-screen').classList.remove('show');
   initSoloGame();
+});
+
+// Solo: Volver al título
+document.getElementById('btn-solo-back').addEventListener('click', () => {
+  document.getElementById('solo-difficulty-screen').classList.remove('show');
+  document.getElementById('title-screen').style.display = 'flex';
+  net.isSolo = false;
 });
 
 // Botón "Jugar cooperativo"
