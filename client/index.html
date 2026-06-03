@@ -161,7 +161,7 @@
 
   /* INDICADOR DEL COMPAÑERO EN HUD */
   #peer-hud {
-    position:fixed; top:16px; left:50%; transform:translateX(-50%);
+    position:fixed; bottom:220px; left:16px;
     display:none; align-items:center; gap:8px;
     background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.1);
     padding:.35em .9em; border-radius:20px;
@@ -256,7 +256,7 @@
   /* En pantalla horizontal compacta: distribuir difficulty en fila para ahorrar alto */
   @media (orientation: landscape) and (max-height: 500px) {
     .difficulty-row { flex-direction:row; gap:8px; }
-    .diff-btn { min-width:140px; padding:.5em 1em; font-size:.72rem; }
+    .diff-btn { min-width:0; flex:1; padding:.5em .6em; font-size:.72rem; }
     #title-screen h1 { font-size:clamp(1.6rem,6vh,3rem); margin-bottom:0; }
     .subtitle { margin-bottom:.6em; }
     .ornament { margin:.3em auto; }
@@ -470,7 +470,7 @@
 <div id="red-tint"></div>
 
 <!-- Tag de versión (esquina inferior izquierda) -->
-<div id="version-tag">v0.3.4</div>
+<div id="version-tag">v0.3.5</div>
 
 <!-- Pantalla final -->
 <div id="end-screen">
