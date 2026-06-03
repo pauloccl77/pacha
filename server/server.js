@@ -32,9 +32,8 @@ setInterval(() => {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function generateRoomCode() {
-  // Código tipo "BOSQUE-1234" — corto y memorable
   const num = Math.floor(1000 + Math.random() * 9000);
-  return `BOSQUE-${num}`;
+  return `${num}`;
 }
 
 function generateSeed() {
@@ -146,7 +145,15 @@ wss.on('connection', (ws, req) => {
         role: 'guest',
         difficulty: room.difficulty,
         mission: room.mission,
+        gameStarted: room.gameStarted,
       });
+      // Si la partida ya empezó, arrancar al guest de inmediato
+      if (room.gameStarted) {
+        if (room.worldLayout) {
+          send(ws, 'world_layout', { layout: room.worldLayout });
+        }
+        send(ws, 'game_started', {});
+      }
       // Avisar al host que su compañero llegó
       send(room.host, 'peer_joined', {});
       return;
@@ -199,10 +206,6 @@ wss.on('connection', (ws, req) => {
     // ── Comenzar partida (solo el host) ─────────────────────────────
     if (type === 'start_game') {
       if (ws.role !== 'host') return;
-      if (!room.guest) {
-        send(ws, 'error', { message: 'no_guest' });
-        return;
-      }
       room.gameStarted = true;
       console.log(`[room] ${ws.roomCode} game started`);
       broadcastToRoom(room, 'game_started', {});

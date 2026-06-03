@@ -349,14 +349,11 @@
   <div class="ornament"></div>
   <p class="subtitle">Bosque · Valle Central · Chile</p>
   <div class="ornament"></div>
-  <button class="lobby-btn" id="btn-solo" style="max-width:280px;margin-bottom:.5em">Jugar solo</button>
-  <button class="lobby-btn secondary" id="btn-multi" style="max-width:280px">Jugar en cooperativo</button>
+  <button class="lobby-btn" id="btn-multi" style="max-width:280px">INGRESAR</button>
 </div>
 
 <!-- LOBBY MULTIJUGADOR -->
 <div id="lobby-screen">
-  <h2>Cooperativo</h2>
-  <p class="lobby-sub">2 jugadores · 1 misión compartida</p>
 
   <!-- Crear sala -->
   <div class="lobby-card" id="card-create">
@@ -378,13 +375,13 @@
     <div class="room-code-display" id="room-code-display">—</div>
     <p class="lobby-hint">Comparte este código con tu compañero</p>
     <div class="lobby-status" id="status-host">Esperando a tu compañero…</div>
-    <button class="lobby-btn" id="btn-start-multi" style="display:none">Comenzar partida</button>
+    <button class="lobby-btn" id="btn-start-multi" style="display:none">INGRESAR SALA</button>
   </div>
 
   <!-- Unirse a sala -->
   <div class="lobby-card" id="card-join">
     <h3>Unirse a sala</h3>
-    <input class="lobby-input" id="code-input" placeholder="BOSQUE-1234" maxlength="11"/>
+    <input class="lobby-input" id="code-input" placeholder="1234" maxlength="4"/>
     <button class="lobby-btn" id="btn-join">Unirse</button>
     <div class="lobby-status" id="status-guest"></div>
   </div>
@@ -392,7 +389,7 @@
   <button class="lobby-btn secondary" id="btn-back" style="max-width:200px;margin-top:.5em">← Volver</button>
 </div>
 
-<!-- SELECTOR DIFICULTAD SOLO -->
+<!-- SELECTOR DIFICULTAD SOLO — deshabilitado temporalmente
 <div id="solo-difficulty-screen">
   <h2>Dificultad</h2>
   <p class="lobby-sub">Modo solo · elige tu desafío</p>
@@ -406,6 +403,7 @@
   </div>
   <button class="lobby-btn secondary" id="btn-solo-back" style="max-width:200px;margin-top:.5em">← Volver</button>
 </div>
+-->
 
 <!-- HUD del compañero (visible durante el juego) -->
 <div id="peer-hud">
@@ -470,7 +468,7 @@
 <div id="red-tint"></div>
 
 <!-- Tag de versión (esquina inferior izquierda) -->
-<div id="version-tag">v0.3.5</div>
+<div id="version-tag">v0.4.0</div>
 
 <!-- Pantalla final -->
 <div id="end-screen">
@@ -2181,6 +2179,7 @@ function handleServerMsg(msg) {
       document.getElementById('room-code-display').textContent = msg.code;
       document.getElementById('card-code').style.display = 'block';
       document.getElementById('status-host').textContent = 'Esperando a tu compañero…';
+      document.getElementById('btn-start-multi').style.display = 'block';
       // Regenerar misión con dificultad vigente y enviar al servidor
       game.mission = generateMission(selectedDifficulty);
       game.goal = selectedDifficulty;
@@ -2193,14 +2192,16 @@ function handleServerMsg(msg) {
     case 'peer_joined':
       document.getElementById('status-host').textContent = '✦ ¡Compañero conectado! Puedes iniciar.';
       document.getElementById('status-host').className = 'lobby-status ok';
-      document.getElementById('btn-start-multi').style.display = 'block';
+      document.getElementById('btn-start-multi').textContent = 'COMENZAR PARTIDA';
       net.peerReady = true;
+      updatePeerHUD();
       break;
 
     case 'joined':
       net.code = msg.code;
       net.seed = msg.seed;
       net.role = 'guest';
+      net.peerReady = true;
       // Si el host ya configuró la misión, recibirla
       if (msg.mission) {
         game.mission = msg.mission;
@@ -2342,7 +2343,7 @@ const peerState = {
 
 function updatePeerHUD() {
   const hud = document.getElementById('peer-hud');
-  hud.classList.toggle('show', net.role !== null && !net.isSolo);
+  hud.classList.toggle('show', net.role !== null && !net.isSolo && net.peerReady);
   document.getElementById('peer-drop-1').classList.toggle('empty', net.peerWater < 1);
   document.getElementById('peer-drop-2').classList.toggle('empty', net.peerWater < 2);
   document.getElementById('peer-dead').style.display = net.peerDead ? 'inline' : 'none';
@@ -2372,7 +2373,7 @@ diffBtns.forEach(btn => {
   });
 });
 
-// Selector de dificultad (modo solo)
+/* MODO SOLO — deshabilitado temporalmente
 const soloDiffBtns = document.querySelectorAll('#solo-difficulty-screen .diff-btn');
 soloDiffBtns.forEach(btn => {
   btn.addEventListener('click', () => {
@@ -2382,25 +2383,23 @@ soloDiffBtns.forEach(btn => {
   });
 });
 
-// Botón "Jugar solo" → mostrar selector de dificultad
 document.getElementById('btn-solo').addEventListener('click', () => {
   net.isSolo = true;
   document.getElementById('title-screen').style.display = 'none';
   document.getElementById('solo-difficulty-screen').classList.add('show');
 });
 
-// Solo: Comenzar
 document.getElementById('btn-solo-start').addEventListener('click', () => {
   document.getElementById('solo-difficulty-screen').classList.remove('show');
   initSoloGame();
 });
 
-// Solo: Volver al título
 document.getElementById('btn-solo-back').addEventListener('click', () => {
   document.getElementById('solo-difficulty-screen').classList.remove('show');
   document.getElementById('title-screen').style.display = 'flex';
   net.isSolo = false;
 });
+*/
 
 // Botón "Jugar cooperativo"
 document.getElementById('btn-multi').addEventListener('click', () => {
@@ -2462,7 +2461,7 @@ document.getElementById('btn-start-multi').addEventListener('click', () => {
   startGame();
 });
 
-// ── Iniciar partida solo ─────────────────────────────────────────
+/* MODO SOLO — deshabilitado temporalmente
 function initSoloGame() {
   game.goal = selectedDifficulty;
   game.collected = 0;
@@ -2475,6 +2474,7 @@ function initSoloGame() {
   updateWaterMeter();
   showBriefing();
 }
+*/
 
 // ── Iniciar partida multijugador ─────────────────────────────────
 function startGame() {
